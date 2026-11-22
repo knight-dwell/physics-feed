@@ -36,6 +36,22 @@ Then open **Physics Feed** from the app menu, or type **`pfeed`** in a terminal.
 | `git pull && ./install.sh` | update (in the `physics-feed` folder) |
 | `./uninstall.sh` | remove (add `--purge` to delete settings and saved papers too) |
 
+## Android
+
+Download **`physics-feed.apk`** from the [latest release](https://github.com/knight-dwell/physics-feed/releases/latest)
+on your phone, open it and allow installing from your browser/files app when Android asks. Same topics, journals,
+search, abstracts, PDFs, citations, folders and flairs, plus Android's share sheet and a notification when new papers
+in your topics arrive. Settings can be sent between phone and desktop (⋮ → Export / Import settings).
+
+Build it yourself: `cd android && ./gradlew assembleRelease` (needs JDK 17 and the Android SDK).
+
+## Updates
+
+- **Desktop**: the ⇪ button in the top bar checks GitHub for a new version; with **Update automatically** on, it
+  installs new versions by itself (restart the app afterwards). Or: `git pull && ./install.sh`.
+- **Android**: ⋮ → **Updates**; with **Update automatically** on, a new release is downloaded and Android asks you to
+  confirm the install.
+
 ## Make it yours
 
 - **My topics → ＋ Add a field…** pick from condensed matter theory / experiment, superconductivity, magnetism,
