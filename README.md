@@ -38,7 +38,7 @@ Then open **Physics Feed** from the app menu, or type **`pfeed`** in a terminal.
 
 ## Android
 
-Download **`wavepacket.apk`** from the [latest release](https://github.com/knight-dwell/physics-feed/releases/latest)
+Download **`physics-feed.apk`** from the [latest release](https://github.com/knight-dwell/physics-feed/releases/latest)
 on your phone, open it and allow installing from your browser/files app when Android asks. Same topics, journals,
 search, abstracts, PDFs, citations, folders and flairs, plus Android's share sheet and a notification when new papers
 in your topics arrive. Settings can be sent between phone and desktop (⋮ → Export / Import settings).
