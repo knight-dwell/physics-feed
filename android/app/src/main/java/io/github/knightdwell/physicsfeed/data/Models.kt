@@ -105,6 +105,10 @@ data class Config(
             }
             val journals = linkedMapOf<String, JournalSpec>()
             o.optJSONObject("journals")?.let { j -> j.keys().forEach { n -> j.optJSONArray(n)?.let { journals[n] = JournalSpec.fromJson(it) } } }
+            // ISSNs Crossref doesn't know (online ISSNs of some Elsevier journals) -> the print ISSN it uses
+            val fix = mapOf("1873-2119" to "0378-4371", "1873-2135" to "0921-4526", "1873-2143" to "0921-4534",
+                "1873-2429" to "0375-9601", "1873-4766" to "0304-8853", "1879-2944" to "0010-4655")
+            journals.replaceAll { _, s -> fix[s.issn]?.let { s.copy(issn = it) } ?: s }
             val news = linkedMapOf<String, Pair<String, String>>()
             o.optJSONObject("news")?.let { j ->
                 j.keys().forEach { n -> j.optJSONArray(n)?.let { news[n] = it.optString(0) to it.optString(1, "News") } }

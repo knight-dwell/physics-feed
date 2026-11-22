@@ -103,6 +103,11 @@ SEARCH_JOURNALS = {
 }
 
 
+# ISSNs Crossref doesn't know (online ISSNs of some Elsevier journals) -> the print ISSN it uses
+ISSN_FIX = {"1873-2119": "0378-4371", "1873-2135": "0921-4526", "1873-2143": "0921-4534",
+            "1873-2429": "0375-9601", "1873-4766": "0304-8853", "1879-2944": "0010-4655"}
+
+
 def load_conf():
     os.makedirs(CONF_DIR, exist_ok=True)
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -111,6 +116,9 @@ def load_conf():
             json.dump(DEFAULT_CONF, fh, indent=2, ensure_ascii=False)
     with open(CONF) as fh:
         c = json.load(fh)
+    for spec in (c.get("journals") or {}).values():   # repair old settings in place
+        if len(spec) > 2 and spec[2] in ISSN_FIX:
+            spec[2] = ISSN_FIX[spec[2]]
     return {**DEFAULT_CONF, **c}
 
 

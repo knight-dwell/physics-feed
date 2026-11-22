@@ -2,67 +2,67 @@
  "journals": {
   "PRL": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prl.xml",
+   "source": "https://feeds.aps.org/rss/recent/prl.xml",
    "oa": false
   },
   "PRB": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prb.xml",
+   "source": "https://feeds.aps.org/rss/recent/prb.xml",
    "oa": false
   },
   "PRX": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prx.xml",
+   "source": "https://feeds.aps.org/rss/recent/prx.xml",
    "oa": true
   },
   "PRA": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/pra.xml",
+   "source": "https://feeds.aps.org/rss/recent/pra.xml",
    "oa": false
   },
   "PRE": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/pre.xml",
+   "source": "https://feeds.aps.org/rss/recent/pre.xml",
    "oa": false
   },
   "PRD": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prd.xml",
+   "source": "https://feeds.aps.org/rss/recent/prd.xml",
    "oa": false
   },
   "PRC": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prc.xml",
+   "source": "https://feeds.aps.org/rss/recent/prc.xml",
    "oa": false
   },
   "PR Research": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prresearch.xml",
+   "source": "https://feeds.aps.org/rss/recent/prresearch.xml",
    "oa": true
   },
   "PRX Quantum": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prxquantum.xml",
+   "source": "https://feeds.aps.org/rss/recent/prxquantum.xml",
    "oa": true
   },
   "PR Materials": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prmaterials.xml",
+   "source": "https://feeds.aps.org/rss/recent/prmaterials.xml",
    "oa": false
   },
   "PR Applied": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prapplied.xml",
+   "source": "https://feeds.aps.org/rss/recent/prapplied.xml",
    "oa": false
   },
   "PR Fluids": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/prfluids.xml",
+   "source": "https://feeds.aps.org/rss/recent/prfluids.xml",
    "oa": false
   },
   "Rev. Mod. Phys.": {
    "group": "APS",
-   "source": "http://feeds.aps.org/rss/recent/rmp.xml",
+   "source": "https://feeds.aps.org/rss/recent/rmp.xml",
    "oa": false
   },
   "Nature": {
@@ -292,27 +292,27 @@
   },
   "Physica A": {
    "group": "Elsevier",
-   "source": "crossref:1873-2119",
+   "source": "crossref:0378-4371",
    "oa": false
   },
   "Physica B": {
    "group": "Elsevier",
-   "source": "crossref:1873-2135",
+   "source": "crossref:0921-4526",
    "oa": false
   },
   "Physica C": {
    "group": "Elsevier",
-   "source": "crossref:1873-2143",
+   "source": "crossref:0921-4534",
    "oa": false
   },
   "Phys. Lett. A": {
    "group": "Elsevier",
-   "source": "crossref:1873-2429",
+   "source": "crossref:0375-9601",
    "oa": false
   },
   "J. Magn. Magn. Mater.": {
    "group": "Elsevier",
-   "source": "crossref:1873-4766",
+   "source": "crossref:0304-8853",
    "oa": false
   },
   "Nucl. Phys. B": {
@@ -322,7 +322,7 @@
   },
   "Comput. Phys. Commun.": {
    "group": "Elsevier",
-   "source": "crossref:1879-2944",
+   "source": "crossref:0010-4655",
    "oa": false
   },
   "Optica": {
@@ -468,7 +468,7 @@
   },
   "Physics (APS)": {
    "group": "Physics news",
-   "url": "http://feeds.aps.org/rss/recent/physics.xml"
+   "url": "https://feeds.aps.org/rss/recent/physics.xml"
   },
   "Physics World": {
    "group": "Physics news",
@@ -1092,7 +1092,7 @@
  },
  "default_news": {
   "Physics (APS)": [
-   "http://feeds.aps.org/rss/recent/physics.xml",
+   "https://feeds.aps.org/rss/recent/physics.xml",
    "Physics news"
   ],
   "Physics World": [
