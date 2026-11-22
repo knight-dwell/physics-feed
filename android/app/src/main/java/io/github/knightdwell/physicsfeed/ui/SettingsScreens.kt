@@ -277,7 +277,7 @@ fun WelcomeScreen(vm: AppViewModel, onImport: () -> Unit) {
     Scaffold { pad ->
         LazyColumn(Modifier.padding(pad).fillMaxSize(), contentPadding = PaddingValues(20.dp)) {
             item {
-                Text("Welcome to Physics Feed", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text("Welcome to Wavepacket", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Text("Pick the fields you work in. The app then follows the right arXiv categories and journals and sorts new papers " +
                     "into tags for you. You can change everything later.", modifier = Modifier.padding(vertical = 12.dp))
             }
@@ -327,7 +327,7 @@ fun ManageFoldersDialog(vm: AppViewModel, onClose: () -> Unit) {
 
 @Composable
 fun HelpDialog(onClose: () -> Unit) {
-    AlertDialog(onDismissRequest = onClose, title = { Text("How to use Physics Feed") }, text = {
+    AlertDialog(onDismissRequest = onClose, title = { Text("How to use Wavepacket") }, text = {
         Text(
             "• New papers from arXiv and journals arrive about twice a day; pull down to fetch now.\n" +
                 "• ☰ opens your topics, journals, news and saved folders. The chips on top are shortcuts.\n" +
@@ -349,7 +349,7 @@ fun UpdatesDialog(vm: AppViewModel, onClose: () -> Unit) {
     androidx.compose.runtime.LaunchedEffect(Unit) { vm.checkUpdate(auto = false) }
     AlertDialog(onDismissRequest = onClose, title = { Text("Updates") }, text = {
         Column {
-            Text("Physics Feed ${io.github.knightdwell.physicsfeed.BuildConfig.VERSION_NAME}\nUpdates come from github.com/${io.github.knightdwell.physicsfeed.data.Updater.REPO}",
+            Text("Wavepacket ${io.github.knightdwell.physicsfeed.BuildConfig.VERSION_NAME}\nUpdates come from github.com/${io.github.knightdwell.physicsfeed.data.Updater.REPO}",
                 fontSize = 14.sp)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 10.dp)) {
                 Switch(state.autoUpdate, { vm.setAutoUpdate(it) })

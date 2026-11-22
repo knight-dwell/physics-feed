@@ -33,17 +33,55 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val catalog = Catalog(app)
     private val store = Store(app)
 
+    val firstRun = MutableStateFlow(!store.hasConfig())
     private val _config = MutableStateFlow(store.loadConfig())
     val config: StateFlow<Config> = _config
-    private val _feed = MutableStateFlow(store.loadFeed())
+    private val _feed = MutableStateFlow(FeedData())        // filled in the background: the first screen shows at once
     val feed: StateFlow<FeedData> = _feed
     private val _state = MutableStateFlow(store.loadState())
     val state: StateFlow<Store.State> = _state
+    val loading = MutableStateFlow(true)
+    val images = MutableStateFlow<Map<String, String>>(emptyMap())   // url -> preview picture found on the page
+
+    init {
+        viewModelScope.launch(Dispatchers.Main) {   // dispatched (not immediate): runs after every field is set up
+            val f = withContext(Dispatchers.IO) { store.loadFeed() }
+            _feed.value = f
+            loading.value = false
+            if (!firstRun.value && f.items.isEmpty()) refresh()
+        }
+    }
+
+    /** A news item without a picture: look for the page's preview image once, in the background. */
+    fun wantImage(p: Paper) {
+        if (p.image.isNotEmpty() || p.url in images.value || p.kind != "news") return
+        images.value = images.value + (p.url to "")
+        viewModelScope.launch {
+            val u = withContext(Dispatchers.IO) { runCatching { Fetcher.ogImage(p.url) }.getOrDefault("") }
+            if (u.isNotEmpty()) images.value = images.value + (p.url to u)
+        }
+    }
+
+    val linkView = MutableStateFlow<View?>(null)      // from wavepacket:// links
+    val linkScreen = MutableStateFlow<String?>(null)
+    val pendingSearch = MutableStateFlow<String?>(null)   // typed in the side menu, run by the Search screen
+
+    /** Where to send people for a journal we couldn't fetch: its site (from the feed link) or a web search. */
+    fun journalWebsite(name: String): String {
+        if (name == "arXiv") return "https://arxiv.org/list/cond-mat/new"
+        val spec = _config.value.journals[name]
+        if (spec != null && spec.url.startsWith("http")) {
+            val u = java.net.URL(spec.url); return "${u.protocol}://${u.host}"
+        }
+        return "https://www.google.com/search?q=" + java.net.URLEncoder.encode("$name journal latest articles", "UTF-8")
+    }
+
+    fun setBuiltinPdf(on: Boolean) = setState(_state.value.copy(builtinPdf = on))
+    fun setNewsCards(on: Boolean) = setState(_state.value.copy(newsCards = on))
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing
     private val _message = MutableStateFlow<String?>(null)
     val message: StateFlow<String?> = _message
-    val firstRun = MutableStateFlow(!store.hasConfig())
 
     fun toast(s: String?) { _message.value = s }
 
@@ -83,7 +121,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (_refreshing.value) return
         _refreshing.value = true
         viewModelScope.launch {
-            val res = withContext(Dispatchers.IO) { runCatching { Fetcher.refresh(_config.value, _feed.value) } }
+            val res = withContext(Dispatchers.IO) {
+                runCatching { Fetcher.refresh(_config.value, _feed.value) { partial -> _feed.value = partial } }
+            }
             res.onSuccess { (f, _) ->
                 withContext(Dispatchers.IO) { store.saveFeed(f) }
                 _feed.value = f
@@ -217,7 +257,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun importConfig(text: String) {
         runCatching { store.importConfig(text) }
             .onSuccess { _config.value = it; firstRun.value = false; retag(); toast("Settings imported"); refresh() }
-            .onFailure { toast("That isn't a Physics Feed settings file") }
+            .onFailure { toast("That isn't a Wavepacket settings file") }
     }
 
     fun topicKeywords(id: String): Pair<String, List<String>?> {

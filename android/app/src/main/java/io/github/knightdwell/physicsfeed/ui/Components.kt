@@ -1,6 +1,12 @@
 package io.github.knightdwell.physicsfeed.ui
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,8 +60,9 @@ fun Tag(text: String, bg: Color, fg: Color, onClick: (() -> Unit)? = null) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun PaperCard(p: Paper, saved: Paper?, dark: Boolean, isNew: Boolean, onOpen: () -> Unit, onStar: () -> Unit) {
+fun PaperCard(p: Paper, saved: Paper?, dark: Boolean, isNew: Boolean, image: String = "", onOpen: () -> Unit, onStar: () -> Unit) {
     val cs = MaterialTheme.colorScheme
+    val starScale by animateFloatAsState(if (saved != null) 1.25f else 1f, spring(dampingRatio = Spring.DampingRatioHighBouncy), label = "star")
     Card(
         onClick = onOpen,
         colors = CardDefaults.cardColors(containerColor = cs.surfaceContainer),
@@ -73,7 +80,8 @@ fun PaperCard(p: Paper, saved: Paper?, dark: Boolean, isNew: Boolean, onOpen: ()
                     Text(p.date, fontSize = 11.sp, color = cs.outline)
                     IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {
                         Icon(if (saved != null) Icons.Filled.Star else Icons.Outlined.StarBorder, "Save",
-                            tint = if (saved != null) Color(0xFFF6C177) else cs.outline, modifier = Modifier.size(20.dp))
+                            tint = if (saved != null) Color(0xFFF6C177) else cs.outline,
+                            modifier = Modifier.size(20.dp).graphicsLayer { scaleX = starScale; scaleY = starScale })
                     }
                 }
                 val own = (saved?.folders?.map { "▤ $it" to true } ?: emptyList()) + (saved?.flairs?.map { "#$it" to false } ?: emptyList())
@@ -86,7 +94,14 @@ fun PaperCard(p: Paper, saved: Paper?, dark: Boolean, isNew: Boolean, onOpen: ()
                         p.topics.take(5).forEach { Tag(it, cs.primaryContainer, cs.onPrimaryContainer) }
                     }
                 }
-                Text(tex2text(p.title), fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 20.sp, color = cs.onSurface)
+                Row {
+                    Text(tex2text(p.title), fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 20.sp, color = cs.onSurface,
+                        modifier = Modifier.weight(1f))
+                    if (image.isNotEmpty()) {
+                        AsyncImage(model = image, contentDescription = null, contentScale = ContentScale.Crop,
+                            modifier = Modifier.padding(start = 10.dp).size(76.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceContainerHigh))
+                    }
+                }
                 if (p.authors.isNotEmpty()) {
                     Text(p.authors.joinToString(", ") + if (p.authors.size >= 6) " et al." else "", fontSize = 12.sp, color = cs.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))

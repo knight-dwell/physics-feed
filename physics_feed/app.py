@@ -217,7 +217,7 @@ LIGHT_EXTRA = """
 """
 
 
-HELP = """<b>Physics Feed</b> collects new papers from arXiv and journals every day (8:30 and 20:30) and sorts them
+HELP = """<b>Wavepacket</b> (Physics Feed) collects new papers from arXiv and journals every day (8:30 and 20:30) and sorts them
 into <b>your topics</b>. News feeds have their own section.
 
 <b>Sidebar</b>
@@ -295,7 +295,7 @@ def open_uri(uri):
 
 class Feed(Gtk.Window):
     def __init__(self):
-        super().__init__(title="Physics Feed")
+        super().__init__(title="Wavepacket")
         self.set_default_size(1240, 820)
         self.set_icon_name("accessories-dictionary")
         self.state = load_json(STATE, {"saved": {}, "last_open": "", "read": []})
@@ -332,7 +332,7 @@ class Feed(Gtk.Window):
         self.side_btn.set_tooltip_text("Show/hide the topic list")
         top.pack_start(self.side_btn, False, False, 0)
         tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        t = Gtk.Label(label="Physics Feed", xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        t = Gtk.Label(label="Wavepacket", xalign=0, ellipsize=Pango.EllipsizeMode.END)
         t.get_style_context().add_class("apptitle")
         self.sub = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
         self.sub.get_style_context().add_class("subtitle")
@@ -1246,13 +1246,13 @@ class Feed(Gtk.Window):
 
     # ---------- first start
     def _welcome(self):
-        dlg = Gtk.Dialog(title="Welcome to Physics Feed", transient_for=self, modal=True)
+        dlg = Gtk.Dialog(title="Welcome to Wavepacket", transient_for=self, modal=True)
         dlg.set_default_size(620, 640)
         dlg.get_style_context().add_class("topics-dialog")
         box = dlg.get_content_area()
         box.set_border_width(18)
         box.set_spacing(10)
-        t = Gtk.Label(label="Welcome to Physics Feed", xalign=0)
+        t = Gtk.Label(label="Welcome to Wavepacket", xalign=0)
         t.get_style_context().add_class("apptitle")
         box.pack_start(t, False, False, 0)
         lab = Gtk.Label(xalign=0, wrap=True, label=(
@@ -2079,7 +2079,7 @@ def main(argv=None):
         sys.argv = ["physics-feed"] + (["--quiet"] if args.quiet else [])
         return RF.main()
     GLib.set_prgname("physics-feed")
-    GLib.set_application_name("Physics Feed")
+    GLib.set_application_name("Wavepacket")
     first_run = not os.path.exists(CONF)
     w = Feed()
     w.show_all()

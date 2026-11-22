@@ -11,6 +11,15 @@ import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 
 /** Network side: arXiv API, RSS/Atom feeds, Crossref, citations. A port of the desktop feed.py. */
 object Fetcher {
@@ -53,6 +62,27 @@ object Fetcher {
     }
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+    private val IMG = Regex("<img[^>]+src=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+    private val OG = Regex("<meta[^>]+(?:property|name)=[\"'](?:og:image|twitter:image)[\"'][^>]*content=[\"']([^\"']+)[\"']", RegexOption.IGNORE_CASE)
+    private val OG2 = Regex("<meta[^>]+content=[\"']([^\"']+)[\"'][^>]*(?:property|name)=[\"'](?:og:image|twitter:image)[\"']", RegexOption.IGNORE_CASE)
+
+    /** The page's preview picture (og:image) for news without a picture in the feed. Reads only the page head. */
+    fun ogImage(url: String): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000; c.readTimeout = 15_000
+        c.setRequestProperty("User-Agent", UA)
+        return c.inputStream.use { ins ->
+            val head = String(ins.readNBytesCompat(96 * 1024))
+            (OG.find(head) ?: OG2.find(head))?.groupValues?.get(1)?.replace("&amp;", "&") ?: ""
+        }
+    }
+
+    private fun java.io.InputStream.readNBytesCompat(n: Int): ByteArray {
+        val buf = java.io.ByteArrayOutputStream(); val b = ByteArray(8192); var total = 0
+        while (total < n) { val r = read(b, 0, minOf(b.size, n - total)); if (r < 0) break; buf.write(b, 0, r); total += r }
+        return buf.toByteArray()
+    }
 
     // ------------------------------------------------------------------ text helpers
     fun clean(s: String?): String {
@@ -112,6 +142,11 @@ object Fetcher {
                 XmlPullParser.START_TAG -> when {
                     tag == "item" || tag == "entry" -> { inItem = true; fields = mutableMapOf(); authors = mutableListOf() }
                     inItem && tag == "author" -> inAuthor = true
+                    inItem && (tag == "thumbnail" || (tag == "content" && p.getAttributeValue(null, "url") != null) ||
+                        (tag == "enclosure" && (p.getAttributeValue(null, "type") ?: "").startsWith("image"))) -> {
+                        val u = p.getAttributeValue(null, "url")
+                        if (!u.isNullOrEmpty() && !fields.containsKey("image")) fields["image"] = u
+                    }
                     inItem && tag == "link" && p.getAttributeValue(null, "href") != null -> {
                         val rel = p.getAttributeValue(null, "rel") ?: "alternate"
                         if (rel == "alternate" && !fields.containsKey("link")) fields["link"] = p.getAttributeValue(null, "href")
@@ -151,10 +186,11 @@ object Fetcher {
         abs = abs.replace(Regex("\\s*\\[Phys\\. Rev\\..*$"), "")
         abs = abs.replace(Regex("^[A-Z][\\w .&]+, Volume \\d+, Issue \\d+[^.]*\\.\\s*"), "")
         val date = parseDate(f["date"] ?: f["pubDate"] ?: f["published"] ?: f["updated"] ?: f["issued"])
+        val img = f["image"] ?: IMG.find(raw + " " + (f["encoded"] ?: ""))?.groupValues?.get(1) ?: ""
         return Paper(
             id = link, source = name, kind = "journal", title = title, authors = authors.take(6),
             abstract = abs.take(6000), url = link, doi = findDoi(f["doi"], f["identifier"], link),
-            date = date.ifEmpty { LocalDate.now().toString() },
+            date = date.ifEmpty { LocalDate.now().toString() }, image = img.replace("&amp;", "&"),
         )
     }
 
@@ -391,36 +427,59 @@ object Fetcher {
     }
 
     // ------------------------------------------------------------------ the daily fetch
-    /** Fetch everything the config asks for and merge it into the feed. Returns (new feed, new topic hits). */
-    fun refresh(conf: Config, old: FeedData): Pair<FeedData, List<Paper>> {
-        val compiled = compileTopics(conf.topics)
+    /** Fetch everything (arXiv + journals + news in parallel) and merge into the feed.
+     *  onPartial gets the growing feed after each source, so the list fills in while it loads.
+     *  First run: only 2 days of arXiv, so the first screen appears fast. */
+    suspend fun refresh(conf: Config, old: FeedData, onPartial: (FeedData) -> Unit = {}): Pair<FeedData, List<Paper>> = coroutineScope {
         val today = LocalDate.now()
-        val errors = linkedMapOf<String, String>()
-        val fresh = mutableListOf<Paper>()
+        val errors = java.util.concurrent.ConcurrentHashMap<String, String>()
+        val fresh = java.util.Collections.synchronizedList(mutableListOf<Paper>())
+        val lock = Mutex()
         var arxivOk = false
-        runCatching {
-            val since = if (old.arxivSince.isNotEmpty()) LocalDate.parse(old.arxivSince).minusDays(2) else today.minusDays(KEEP_DAYS)
-            fresh += fetchArxiv(conf.arxivCategories, since.toString())
-            arxivOk = true
-        }.onFailure { errors["arXiv"] = it.message ?: "error" }
-        for ((name, spec) in conf.journals) {
+        suspend fun publish() = lock.withLock { onPartial(merge(conf, old, fresh.toList(), errors.toMap(), old.arxivSince)) }
+        val gate = Semaphore(8)
+        val jobs = mutableListOf<kotlinx.coroutines.Deferred<*>>()
+        jobs += async(Dispatchers.IO) {
             runCatching {
-                val keep = if (spec.keep > 0) spec.keep.toLong() else KEEP_DAYS
-                val got = if (spec.url == "crossref") fetchCrossref(name, spec.issn, today.minusDays(keep).toString()) else fetchRss(name, spec.url)
-                fresh += got.map { it.copy(filtered = spec.onlyMyTopics, oa = spec.oa || it.oa, keep = if (spec.keep > 0) spec.keep else 0) }
-                Thread.sleep(800)
-            }.onFailure { errors[name] = (it.message ?: "error").take(120) }
+                val since = if (old.arxivSince.isNotEmpty()) LocalDate.parse(old.arxivSince).minusDays(2) else today.minusDays(2)
+                fresh += fetchArxiv(conf.arxivCategories, since.toString())
+                arxivOk = true
+            }.onFailure { errors["arXiv"] = it.message ?: "error" }
+            publish()
+        }
+        for ((name, spec) in conf.journals) jobs += async(Dispatchers.IO) {
+            gate.withPermit {
+                runCatching {
+                    val keep = if (spec.keep > 0) spec.keep.toLong() else KEEP_DAYS
+                    val got = if (spec.url == "crossref") fetchCrossref(name, spec.issn, today.minusDays(keep).toString()) else fetchRss(name, spec.url)
+                    fresh += got.map { it.copy(filtered = spec.onlyMyTopics, oa = spec.oa || it.oa, keep = if (spec.keep > 0) spec.keep else 0) }
+                }.onFailure { errors[name] = (it.message ?: "error").take(120) }
+            }
         }
         val jsince = today.minusDays(KEEP_DAYS).toString()
-        for ((name, pair) in conf.news) {
-            runCatching {
-                fresh += fetchRss(name, pair.first).filter { it.date >= jsince }.take(60)
-                    .map { it.copy(kind = "news", group = pair.second, abstract = it.abstract.take(1500)) }
-            }.onFailure { errors[name] = (it.message ?: "error").take(120) }
+        for ((name, pair) in conf.news) jobs += async(Dispatchers.IO) {
+            gate.withPermit {
+                runCatching {
+                    fresh += fetchRss(name, pair.first).filter { it.date >= jsince }.take(60)
+                        .map { it.copy(kind = "news", group = pair.second, abstract = it.abstract.take(1500)) }
+                }.onFailure { errors[name] = (it.message ?: "error").take(120) }
+            }
+            publish()
         }
+        // publish journal results in batches, not after every single one
+        launch { while (jobs.any { it.isActive }) { kotlinx.coroutines.delay(2500); publish() } }
+        jobs.awaitAll()
+        val feed = merge(conf, old, fresh.toList(), errors.toMap(), if (arxivOk) today.toString() else old.arxivSince)
+        val oldIds = old.items.map { it.id }.toSet()
+        val newHits = feed.items.filter { it.topics.isNotEmpty() && it.id !in oldIds }
+        feed to (if (oldIds.isEmpty()) emptyList() else newHits)
+    }
+
+    fun merge(conf: Config, old: FeedData, fresh: List<Paper>, errors: Map<String, String>, arxivSince: String): FeedData {
+        val compiled = compileTopics(conf.topics)
+        val today = LocalDate.now()
         val byId = LinkedHashMap<String, Paper>()
         old.items.forEach { byId[it.id] = it }
-        val oldIds = byId.keys.toSet()
         val jdoi = HashMap<String, String>()
         byId.values.filter { it.doi.isNotEmpty() && it.kind == "journal" }.forEach { jdoi[it.doi.lowercase()] = it.id }
         for (it0 in fresh) {
@@ -432,20 +491,17 @@ object Fetcher {
                 jdoi[d] = it0.id
             }
             val prev = byId[it0.id]
-            byId[it0.id] = it0.copy(topics = tags, firstSeen = prev?.firstSeen?.ifEmpty { null } ?: today.toString())
+            byId[it0.id] = it0.copy(topics = tags, firstSeen = prev?.firstSeen?.ifEmpty { null } ?: today.toString(),
+                image = it0.image.ifEmpty { prev?.image ?: "" })
         }
         val cutoff = today.minusDays(KEEP_DAYS).toString()
-        val items = byId.values.map { p -> if (p.kind == "news") p else p.copy(topics = match(p.title + " " + p.abstract, compiled)) }
-            .filter { p ->
-                val limit = if (p.keep > 0) today.minusDays(p.keep.toLong()).toString() else cutoff
-                (p.date.ifEmpty { p.firstSeen }) >= limit
-            }
-            .sortedWith(compareByDescending<Paper> { it.date }.thenByDescending { it.firstSeen })
-        val feed = FeedData(
+        val items = byId.values.filter { p ->
+            val limit = if (p.keep > 0) today.minusDays(p.keep.toLong()).toString() else cutoff
+            (p.date.ifEmpty { p.firstSeen }) >= limit
+        }.sortedWith(compareByDescending<Paper> { it.date }.thenByDescending { it.firstSeen })
+        return FeedData(
             updated = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-            items = items, errors = errors, arxivSince = if (arxivOk) today.toString() else old.arxivSince,
+            items = items, errors = errors, arxivSince = arxivSince,
         )
-        val newHits = items.filter { it.topics.isNotEmpty() && it.id !in oldIds }
-        return feed to (if (oldIds.isEmpty()) emptyList() else newHits)
     }
 }

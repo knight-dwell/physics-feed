@@ -11,6 +11,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +55,7 @@ sealed class Screen {
     data object Search : Screen()
     data object Topics : Screen()
     data object Journals : Screen()
+    data class Pdf(val file: java.io.File, val paper: Paper) : Screen()
 }
 
 class MainActivity : ComponentActivity() {
@@ -57,10 +65,32 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         FetchWorker.schedule(this)
+        handleLink(intent)
         setContent {
             val state by vm.state.collectAsState()
             PhysicsFeedTheme(state.theme) {
                 Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { App(vm) }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleLink(intent)
+    }
+
+    /** wavepacket://view/<foryou|today|saved|oa|news|all>, wavepacket://source/<journal>, wavepacket://screen/<search|topics|journals> */
+    private fun handleLink(i: android.content.Intent?) {
+        val u = i?.data ?: return
+        if (u.scheme != "wavepacket") return
+        val arg = u.pathSegments.firstOrNull() ?: return
+        when (u.host) {
+            "view" -> vm.linkView.value = View("special", arg)
+            "source" -> vm.linkView.value = View("source", arg)
+            "screen" -> vm.linkScreen.value = arg
+            // wavepacket://import/<base64url settings>: only on a fresh install (never replaces existing settings)
+            "import" -> if (vm.firstRun.value) runCatching {
+                vm.importConfig(String(android.util.Base64.decode(arg, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)))
             }
         }
     }
@@ -80,6 +110,7 @@ fun App(vm: AppViewModel) {
     val stack = remember { mutableStateListOf<Screen>(Screen.Feed) }
     var view by remember { mutableStateOf(View.ForYou) }
     var dialog by remember { mutableStateOf<String?>(null) }
+    val depthBefore = remember { androidx.compose.runtime.mutableIntStateOf(1) }
 
     val notifPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val importer = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -88,7 +119,6 @@ fun App(vm: AppViewModel) {
     }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33) notifPerm.launch(Manifest.permission.POST_NOTIFICATIONS)
-        if (!firstRun && vm.feed.value.items.isEmpty()) vm.refresh()
         vm.checkUpdate(auto = true)
     }
     val ready by vm.updateReady.collectAsState()
@@ -102,8 +132,29 @@ fun App(vm: AppViewModel) {
     BackHandler(enabled = stack.size > 1) { stack.removeAt(stack.lastIndex) }
     val back: () -> Unit = { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
 
+    val linkView by vm.linkView.collectAsState()
+    val linkScreen by vm.linkScreen.collectAsState()
+    LaunchedEffect(linkView) { linkView?.let { view = it; while (stack.size > 1) stack.removeAt(stack.lastIndex); vm.linkView.value = null } }
+    LaunchedEffect(linkScreen) {
+        linkScreen?.let {
+            when (it) { "search" -> stack.add(Screen.Search); "topics" -> stack.add(Screen.Topics); "journals" -> stack.add(Screen.Journals) }
+            vm.linkScreen.value = null
+        }
+    }
+
     Box {
-        when (val s = stack.last()) {
+        // screens slide in from the right and back out to the right (cheap: translation + fade only)
+        AnimatedContent(
+            targetState = stack.last(),
+            transitionSpec = {
+                val forward = stack.size > depthBefore.intValue
+                depthBefore.intValue = stack.size
+                if (forward) (slideInHorizontally(tween(260)) { it / 3 } + fadeIn(tween(220))) togetherWith fadeOut(tween(160))
+                else fadeIn(tween(200)) togetherWith (slideOutHorizontally(tween(240)) { it / 3 } + fadeOut(tween(200)))
+            },
+            label = "screens",
+        ) { s ->
+        when (s) {
             Screen.Feed -> FeedScreen(vm, view, onView = { view = it }, onOpen = { stack.add(Screen.Detail(it)) }, onNav = { what ->
                 when (what) {
                     "search" -> stack.add(Screen.Search)
@@ -113,15 +164,17 @@ fun App(vm: AppViewModel) {
                     "export" -> {
                         val f = File(File(ctx.cacheDir, "share").apply { mkdirs() }, "physics-feed-settings.json")
                         f.writeText(vm.exportConfigText())
-                        shareFile(ctx, f, "application/json", "Send my Physics Feed settings")
+                        shareFile(ctx, f, "application/json", "Send my Wavepacket settings")
                     }
                     else -> dialog = what
                 }
             })
-            is Screen.Detail -> DetailScreen(vm, s.paper, onBack = back)
+            is Screen.Detail -> DetailScreen(vm, s.paper, onBack = back, onPdf = { f -> stack.add(Screen.Pdf(f, s.paper)) })
+            is Screen.Pdf -> io.github.knightdwell.physicsfeed.ui.PdfScreen(s.file, s.paper, onBack = back)
             Screen.Search -> SearchScreen(vm, onOpen = { stack.add(Screen.Detail(it)) }, onBack = back)
             Screen.Topics -> TopicsScreen(vm, onBack = back)
             Screen.Journals -> JournalsScreen(vm, onBack = back)
+        }
         }
         when (dialog) {
             "help" -> HelpDialog { dialog = null }

@@ -127,6 +127,11 @@ fun SearchScreen(vm: AppViewModel, onOpen: (Paper) -> Unit, onBack: () -> Unit) 
         }
     }
 
+    val pending by vm.pendingSearch.collectAsState()
+    LaunchedEffect(pending) {   // a search typed in the side menu
+        pending?.let { text = it; vm.pendingSearch.value = null; run(false) }
+    }
+
     val nearEnd by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 } }
     LaunchedEffect(nearEnd) { if (results.isNotEmpty() && nearEnd >= results.size - 3 && results.size < total && src != "scholar") run(true) }
 

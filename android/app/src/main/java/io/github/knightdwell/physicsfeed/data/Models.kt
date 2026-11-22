@@ -24,6 +24,7 @@ data class Paper(
     val keep: Int = 0,
     val folders: List<String> = emptyList(),   // only for saved papers
     val flairs: List<String> = emptyList(),
+    val image: String = "",                    // picture from the feed (news photo, journal graphic)
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("source", source); put("kind", kind); put("title", title)
@@ -39,6 +40,7 @@ data class Paper(
         if (keep > 0) put("keep", keep)
         if (folders.isNotEmpty()) put("folders", JSONArray(folders))
         if (flairs.isNotEmpty()) put("flairs", JSONArray(flairs))
+        if (image.isNotEmpty()) put("image", image)
     }
 
     companion object {
@@ -50,6 +52,7 @@ data class Paper(
             topics = o.optJSONArray("topics").strings(), oa = o.optBoolean("oa"), group = o.optString("group"),
             firstSeen = o.optString("first_seen"), keep = o.optInt("keep"),
             folders = o.optJSONArray("folders").strings(), flairs = o.optJSONArray("flairs").strings(),
+            image = o.optString("image"),
         )
     }
 }

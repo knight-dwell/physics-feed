@@ -52,6 +52,8 @@ class Store(private val context: Context) {
         val lastOpen: String = "",
         val autoUpdate: Boolean = true,
         val updateChecked: String = "",
+        val builtinPdf: Boolean = true,      // read PDFs inside the app (false: hand them to a PDF app)
+        val newsCards: Boolean = true,       // news as swipeable stacked cards (false: a normal list)
     )
 
     fun loadState(): State = runCatching {
@@ -64,6 +66,8 @@ class Store(private val context: Context) {
             lastOpen = o.optString("last_open"),
             autoUpdate = o.optBoolean("auto_update", true),
             updateChecked = o.optString("update_checked"),
+            builtinPdf = o.optBoolean("builtin_pdf", true),
+            newsCards = o.optBoolean("news_cards", true),
         )
     }.getOrDefault(State())
 
@@ -75,6 +79,8 @@ class Store(private val context: Context) {
         o.put("last_open", st.lastOpen)
         o.put("auto_update", st.autoUpdate)
         o.put("update_checked", st.updateChecked)
+        o.put("builtin_pdf", st.builtinPdf)
+        o.put("news_cards", st.newsCards)
         atomicWrite(stateFile, o.toString())
     }
 

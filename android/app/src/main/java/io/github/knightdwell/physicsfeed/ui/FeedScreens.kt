@@ -1,5 +1,26 @@
 package io.github.knightdwell.physicsfeed.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -82,38 +103,73 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Paper) -> Unit, onNav: (String) -> Unit) {
+    val ctx = LocalContext.current
     val feed by vm.feed.collectAsState()
     val state by vm.state.collectAsState()
     val config by vm.config.collectAsState()
     val refreshing by vm.refreshing.collectAsState()
+    val loading by vm.loading.collectAsState()
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val dark = isDark(state.theme)
     var menu by remember { mutableStateOf(false) }
-    val list = remember(feed, state, config, view) { vm.items(view) }
+    var drawerQuery by remember { mutableStateOf("") }
+
+    // quick-access sections: swipe left/right between them (the chips on top follow)
+    val quick = remember(config) {
+        listOf(View.ForYou, View.Today, View.Saved, View.Open, View.News) +
+            config.quick.filter { it == "arXiv" || it in config.journals }.map { View("source", it) }
+    }
+    val inQuick = view in quick
+    val pager = rememberPagerState(initialPage = quick.indexOf(view).coerceAtLeast(0)) { quick.size }
+    LaunchedEffect(pager.settledPage) { if (inQuick || view == quick[0]) quick.getOrNull(pager.settledPage)?.let { if (it != view) onView(it) } }
+    LaunchedEffect(view) { val i = quick.indexOf(view); if (i >= 0 && i != pager.currentPage) pager.animateScrollToPage(i) }
+    val chipRow = rememberLazyListState()
+    LaunchedEffect(pager.currentPage) { chipRow.animateScrollToItem(maxOf(0, pager.currentPage - 1)) }
 
     ModalNavigationDrawer(drawerState = drawer, drawerContent = {
-        ModalDrawerSheet(Modifier.width(300.dp)) {
-            LazyColumn(contentPadding = PaddingValues(vertical = 12.dp)) {
+        ModalDrawerSheet(Modifier.width(310.dp)) {
+            // search box: filters this menu as you type; Enter searches papers (arXiv / journals)
+            OutlinedTextField(
+                value = drawerQuery, onValueChange = { drawerQuery = it }, singleLine = true,
+                placeholder = { Text("Search topics, journals… or papers") },
+                leadingIcon = { Icon(Icons.Filled.Search, null) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = {
+                    if (drawerQuery.isNotBlank()) { vm.pendingSearch.value = drawerQuery; scope.launch { drawer.close() }; onNav("search") }
+                }),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 4.dp),
+            )
+            val q = drawerQuery.trim().lowercase()
+            LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
                 var n = 0   // keys must be unique even if a name appears twice
-                fun entry(v: View, label: String, count: Int?) {
+                fun entry(v: View, label: String, count: Int?, web: String? = null) {
+                    if (q.isNotEmpty() && q !in label.lowercase()) return
                     item(key = "${n++}") {
                         NavigationDrawerItem(
                             label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                            badge = { if (count != null && count > 0) Text("$count", fontSize = 12.sp) },
+                            badge = {
+                                if (web != null) Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open the journal's website", Modifier.size(16.dp))
+                                else if (count != null && count > 0) Text("$count", fontSize = 12.sp)
+                            },
                             selected = v == view,
-                            onClick = { onView(v); scope.launch { drawer.close() } },
-                            modifier = Modifier.padding(horizontal = 12.dp).height(44.dp),
+                            onClick = {
+                                if (web != null) openUrl(ctx, web) else onView(v)
+                                scope.launch { drawer.close() }
+                            },
+                            modifier = Modifier.padding(horizontal = 12.dp).height(44.dp).animateItem(),
                         )
                     }
                 }
-                fun head(t: String) { item(key = "h${n++}") { Text(t.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 28.dp, top = 14.dp, bottom = 4.dp)) } }
-                item { Text("Physics Feed", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 28.dp, bottom = 8.dp)) }
+                fun head(t: String) {
+                    if (q.isNotEmpty()) return
+                    item(key = "h${n++}") { Text(t.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 28.dp, top = 14.dp, bottom = 4.dp)) }
+                }
                 listOf(View.ForYou, View.Today, View.All, View.Open, View.News).forEach { entry(it, vm.title(it), vm.items(it).size) }
                 head("Saved")
                 entry(View.Saved, "All saved", state.saved.size)
@@ -125,12 +181,20 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                     tps.keys.forEach { entry(View("topic", it), "·  $it", vm.items(View("topic", it)).size) }
                 }
                 head("Journals")
-                (listOf("arXiv") + config.journals.keys).forEach { entry(View("source", it), it + if (vm.catalog.isOpenAccess(it)) "  🔓" else "", vm.items(View("source", it)).size) }
+                (listOf("arXiv") + config.journals.keys).forEach { j ->
+                    val cnt = vm.items(View("source", j)).size
+                    // a journal we couldn't fetch: just a link to its website
+                    val web = if (cnt == 0 && j in feed.errors) vm.journalWebsite(j) else null
+                    entry(View("source", j), j + if (vm.catalog.isOpenAccess(j)) "  🔓" else "", cnt, web)
+                }
                 if (config.news.isNotEmpty()) {
                     head("News")
                     config.news.values.map { it.second }.distinct().forEach { g ->
                         entry(View("newsgroup", g), g, vm.items(View("newsgroup", g)).size)
-                        config.news.filter { it.value.second == g }.keys.forEach { entry(View("source", it), "·  $it", vm.items(View("source", it)).size) }
+                        config.news.filter { it.value.second == g }.forEach { (nm, pair) ->
+                            val cnt = vm.items(View("source", nm)).size
+                            entry(View("source", nm), "·  $nm", cnt, if (cnt == 0 && nm in feed.errors) pair.first.substringBefore("/feed").substringBefore("/rss") else null)
+                        }
                     }
                 }
             }
@@ -140,12 +204,21 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
             TopAppBar(
                 title = {
                     Column {
-                        Text(vm.title(view), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${list.size} · updated ${feed.updated.ifEmpty { "never" }}", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline)
+                        AnimatedContent(vm.title(view), transitionSpec = { (fadeIn() + slideInVertically { it / 2 }) togetherWith fadeOut() }, label = "title") {
+                            Text(it, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(if (refreshing) "fetching…" else "updated ${feed.updated.ifEmpty { "never" }}", fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.outline)
                     }
                 },
                 navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }) { Icon(Icons.Filled.Menu, "Topics, journals, news") } },
                 actions = {
+                    if (view == View.News || view.kind == "newsgroup") {
+                        IconButton(onClick = { vm.setNewsCards(!state.newsCards) }) {
+                            Icon(if (state.newsCards) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.ViewCarousel,
+                                if (state.newsCards) "Show news as a list" else "Show news as cards")
+                        }
+                    }
                     IconButton(onClick = { onNav("search") }) { Icon(Icons.Filled.Search, "Search papers") }
                     IconButton(onClick = { vm.refresh() }, enabled = !refreshing) { Icon(Icons.Filled.Refresh, "Fetch now") }
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More") }
@@ -154,6 +227,10 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                         DropdownMenuItem(text = { Text("Journals & news") }, onClick = { menu = false; onNav("journals") })
                         DropdownMenuItem(text = { Text("Theme: " + mapOf("system" to "follow phone", "dark" to "dark", "light" to "light")[state.theme]) },
                             onClick = { vm.setTheme(mapOf("system" to "dark", "dark" to "light", "light" to "system")[state.theme] ?: "system") })
+                        DropdownMenuItem(text = { Text(if (state.builtinPdf) "PDFs: built-in reader" else "PDFs: open in another app") },
+                            onClick = { vm.setBuiltinPdf(!state.builtinPdf) })
+                        DropdownMenuItem(text = { Text(if (state.newsCards) "News: swipe cards" else "News: list") },
+                            onClick = { vm.setNewsCards(!state.newsCards) })
                         DropdownMenuItem(text = { Text("Export settings (share with colleagues)") }, onClick = { menu = false; onNav("export") })
                         DropdownMenuItem(text = { Text("Import settings…") }, onClick = { menu = false; onNav("import") })
                         DropdownMenuItem(text = { Text("Manage folders") }, onClick = { menu = false; onNav("folders") })
@@ -165,36 +242,57 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
             )
         }) { pad ->
             Column(Modifier.padding(pad)) {
-                val quick = listOf(View.ForYou, View.Today, View.Saved, View.Open, View.News) +
-                    config.quick.filter { it == "arXiv" || it in config.journals }.map { View("source", it) }
-                LazyRow(contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LazyRow(state = chipRow, contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(quick) { v ->
                         FilterChip(selected = v == view, onClick = { onView(v) },
                             label = { Text(if (v.kind == "source") (if (v.key == "Rev. Mod. Phys.") "RMP" else v.key) else vm.title(v)) })
                     }
                 }
-                if (feed.errors.isNotEmpty()) Text("couldn't reach: " + feed.errors.keys.joinToString(", "), fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 16.dp))
+                AnimatedVisibility(refreshing, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp))
+                }
                 PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
-                    if (list.isEmpty()) {
-                        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp)) {
-                            Text(
-                                when {
-                                    feed.items.isEmpty() && refreshing -> "Fetching your first papers… about a minute."
-                                    feed.items.isEmpty() -> "No papers yet. Pull down to fetch."
-                                    view == View.Saved -> "Tap ☆ on a paper to keep it here."
-                                    else -> "Nothing here yet."
-                                }, color = MaterialTheme.colorScheme.outline,
-                            )
+                    if (inQuick) {
+                        HorizontalPager(state = pager, beyondViewportPageCount = 0, key = { quick[it].kind + quick[it].key }) { page ->
+                            ViewList(vm, quick[page], dark, loading, onOpen)
                         }
                     } else {
-                        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                            items(list, key = { it.id }) { p ->
-                                PaperCard(p, state.saved[p.id], dark, isNew = state.lastOpen.isNotEmpty() && p.firstSeen > state.lastOpen.take(10),
-                                    onOpen = { onOpen(p) }, onStar = { vm.toggleSaved(p) })
-                            }
-                        }
+                        ViewList(vm, view, dark, loading, onOpen)
                     }
+                }
+            }
+        }
+    }
+}
+
+/** One section's papers (or the news card stack). */
+@Composable
+private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean, onOpen: (Paper) -> Unit) {
+    val feed by vm.feed.collectAsState()
+    val state by vm.state.collectAsState()
+    val config by vm.config.collectAsState()
+    val refreshing by vm.refreshing.collectAsState()
+    val imgs by vm.images.collectAsState()
+    val list = remember(feed, state.saved, config, v) { vm.items(v) }
+    when {
+        loading -> Skeleton()
+        list.isEmpty() -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp)) {
+            if (refreshing && feed.items.isEmpty()) Skeleton()
+            else Text(
+                when {
+                    feed.items.isEmpty() -> "No papers yet. Pull down to fetch."
+                    v == View.Saved -> "Tap ☆ on a paper to keep it here."
+                    else -> "Nothing here yet."
+                }, color = MaterialTheme.colorScheme.outline,
+            )
+        }
+        (v == View.News || v.kind == "newsgroup") && state.newsCards -> NewsStack(vm, list, onOpen)
+        else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
+            items(list, key = { it.id }) { p ->
+                if (p.kind == "news") LaunchedEffect(p.id) { vm.wantImage(p) }
+                Box(Modifier.animateItem()) {
+                    PaperCard(p, state.saved[p.id], dark, isNew = state.lastOpen.isNotEmpty() && p.firstSeen > state.lastOpen.take(10),
+                        image = p.image.ifEmpty { imgs[p.url] ?: "" }, onOpen = { onOpen(p) }, onStar = { vm.toggleSaved(p) })
                 }
             }
         }
@@ -203,7 +301,7 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun DetailScreen(vm: AppViewModel, paper: Paper, onBack: () -> Unit) {
+fun DetailScreen(vm: AppViewModel, paper: Paper, onBack: () -> Unit, onPdf: (File) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val state by vm.state.collectAsState()
@@ -232,7 +330,11 @@ fun DetailScreen(vm: AppViewModel, paper: Paper, onBack: () -> Unit) {
                 }.getOrNull()
             }
             busy = null
-            if (f != null) openPdf(ctx, f) else openUrl(ctx, paper.url)   // no PDF: the article page instead
+            when {
+                f == null -> openUrl(ctx, paper.url)              // no PDF: the article page instead
+                state.builtinPdf -> onPdf(f)                       // the app's own reader
+                else -> openPdf(ctx, f)                            // the phone's PDF app
+            }
         }
     }
 
