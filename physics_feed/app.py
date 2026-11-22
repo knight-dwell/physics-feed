@@ -510,14 +510,14 @@ class Feed(Gtk.Window):
                 return [i for i in items if i.get("oa")]
             if key == "saved":
                 return list(self.state["saved"].values())
-        if kind == "folder":
-            return [i for i in self.state["saved"].values() if key in i.get("folders", [])]
-        if kind == "flair":
-            return [i for i in self.state["saved"].values() if key in i.get("flairs", [])]
             if key == "all":
                 return [i for i in items if i.get("kind") != "news"]
             if key == "search":
                 return self.s_items
+        if kind == "folder":
+            return [i for i in self.state["saved"].values() if key in i.get("folders", [])]
+        if kind == "flair":
+            return [i for i in self.state["saved"].values() if key in i.get("flairs", [])]
         if kind == "topic":
             return [i for i in items if key in i.get("topics", [])]
         if kind == "group":

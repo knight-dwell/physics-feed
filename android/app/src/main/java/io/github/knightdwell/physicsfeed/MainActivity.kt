@@ -138,7 +138,10 @@ fun App(vm: AppViewModel) {
     LaunchedEffect(linkView) { linkView?.let { view = it; while (stack.size > 1) stack.removeAt(stack.lastIndex); vm.linkView.value = null } }
     LaunchedEffect(linkScreen) {
         linkScreen?.let {
-            when (it) { "search" -> stack.add(Screen.Search); "topics" -> stack.add(Screen.Topics); "journals" -> stack.add(Screen.Journals) }
+            when (it) {
+                "search" -> stack.add(Screen.Search); "topics" -> stack.add(Screen.Topics); "journals" -> stack.add(Screen.Journals)
+                "status", "help", "updates" -> dialog = it
+            }
             vm.linkScreen.value = null
         }
     }
@@ -189,6 +192,7 @@ fun App(vm: AppViewModel) {
             "help" -> HelpDialog { dialog = null }
             "folders" -> ManageFoldersDialog(vm) { dialog = null }
             "updates" -> UpdatesDialog(vm) { dialog = null }
+            "status" -> io.github.knightdwell.physicsfeed.ui.StatusDialog(vm) { dialog = null }
         }
     }
 }

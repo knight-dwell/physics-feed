@@ -364,3 +364,29 @@ fun UpdatesDialog(vm: AppViewModel, onClose: () -> Unit) {
         else TextButton(onClick = { vm.checkUpdate(auto = false) }) { Text("Check now") }
     }, dismissButton = { TextButton(onClick = onClose) { Text("Close") } })
 }
+
+/** Feed status: every source with how many papers it gave and, if it failed, why. */
+@Composable
+fun StatusDialog(vm: AppViewModel, onClose: () -> Unit) {
+    val feed by vm.feed.collectAsState()
+    val config by vm.config.collectAsState()
+    val sources = listOf("arXiv") + config.journals.keys + config.news.keys
+    AlertDialog(onDismissRequest = onClose, title = { Text("Feed status") }, text = {
+        LazyColumn {
+            item {
+                Text("Updated ${feed.updated.ifEmpty { "never" }} · ${feed.items.size} items · arXiv categories: " +
+                    config.arxivCategories.joinToString(", "), fontSize = 12.sp, color = MaterialTheme.colorScheme.outline)
+            }
+            items(sources) { s ->
+                val n = feed.items.count { it.source == s }
+                val err = feed.errors[s]
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+                    Text(s, Modifier.weight(1f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(if (err != null && n == 0) "✗" else "$n", fontSize = 13.sp,
+                        color = if (err != null && n == 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                }
+                if (err != null) Text(err, fontSize = 11.sp, color = MaterialTheme.colorScheme.outline, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }, confirmButton = { TextButton(onClick = onClose) { Text("Close") } })
+}

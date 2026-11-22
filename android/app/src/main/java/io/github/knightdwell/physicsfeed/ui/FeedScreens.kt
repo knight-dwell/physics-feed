@@ -236,6 +236,7 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                         DropdownMenuItem(text = { Text("Export settings (share with colleagues)") }, onClick = { menu = false; onNav("export") })
                         DropdownMenuItem(text = { Text("Import settings…") }, onClick = { menu = false; onNav("import") })
                         DropdownMenuItem(text = { Text("Manage folders") }, onClick = { menu = false; onNav("folders") })
+                        DropdownMenuItem(text = { Text("Feed status") }, onClick = { menu = false; onNav("status") })
                         DropdownMenuItem(text = { Text("Updates") }, onClick = { menu = false; onNav("updates") })
                         DropdownMenuItem(text = { Text("Help") }, onClick = { menu = false; onNav("help") })
                     }
