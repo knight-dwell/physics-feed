@@ -21,6 +21,7 @@ from gi.repository import Gdk, Gio, GLib, Gtk, Pango  # noqa: E402
 from . import feed as RF  # noqa: E402
 from . import catalog as FC  # noqa: E402
 from . import __version__  # noqa: E402
+from . import updater  # noqa: E402
 import urllib.parse  # noqa: E402
 import urllib.request  # noqa: E402
 
@@ -243,6 +244,8 @@ into <b>your topics</b>. News feeds have their own section.
 • Quick buttons (arXiv, PRL, PRB, PRX, RMP) jump straight to that journal.
 • ☀/☾ switches light and dark.  ☰ hides the topic list.  ⟳ fetches right now.
 
+<b>Updates</b>  the ⇪ button: check for a new version; the switch keeps Physics Feed updated by itself.
+
 <b>Terminal</b>  <tt>pfeed</tt> opens the app · <tt>pfeed --refresh</tt> fetches now · <tt>pfeed --help</tt>
 
 <b>Keys</b>  Ctrl+F search the list · Esc close the panel / clear the search"""
@@ -341,7 +344,15 @@ class Feed(Gtk.Window):
         help_btn = self._pill("?", lambda *_: self._help())
         help_btn.set_tooltip_text("How to use Physics Feed")
         top.pack_end(help_btn, False, False, 0)
+        upd = self._pill("\U000f06b0", lambda *_: self._updates_dialog())
+        upd.set_tooltip_text("Updates: check for a new version of Physics Feed, auto-update switch")
+        top.pack_end(upd, False, False, 0)
         main.pack_start(top, False, False, 0)
+        self.update_bar = Gtk.Button(no_show_all=True)
+        self.update_bar.get_style_context().add_class("pill")
+        self.update_bar.get_style_context().add_class("primary")
+        self.update_bar.connect("clicked", lambda *_: self._updates_dialog())
+        main.pack_start(self.update_bar, False, False, 0)
 
         tools = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, max_children_per_line=6, column_spacing=6,
                             row_spacing=6, homogeneous=False)
@@ -427,6 +438,7 @@ class Feed(Gtk.Window):
         main.pack_start(self.scroll, True, True, 0)
 
         self._apply_theme()
+        GLib.timeout_add_seconds(4, lambda: self._auto_update_check() or False)
         self.connect("key-press-event", self._on_key)
         self._narrow = None
         self.connect("size-allocate", self._on_size)
@@ -443,7 +455,8 @@ class Feed(Gtk.Window):
         b.get_style_context().add_class("pill")
         if primary:
             b.get_style_context().add_class("primary")
-        b.connect("clicked", cb)
+        if cb:
+            b.connect("clicked", cb)
         return b
 
     def _save_state(self):
@@ -1488,6 +1501,125 @@ class Feed(Gtk.Window):
             return False
 
         threading.Thread(target=work, daemon=True).start()
+
+    # ---------- updates (from github.com/knight-dwell/physics-feed)
+    def _auto_update_check(self):
+        if not self.state.get("auto_update", True) or not updater.installed():
+            return
+        last = self.state.get("update_checked", "")
+        if last and (dt.datetime.now() - dt.datetime.fromisoformat(last)).total_seconds() < 12 * 3600:
+            return
+
+        def work():
+            try:
+                newer, info = updater.update_available()
+            except Exception:
+                return
+            self.state["update_checked"] = dt.datetime.now().isoformat(timespec="minutes")
+            if not newer:
+                return
+            ok, log = updater.install(info["commit"])   # auto-update is on: install it now
+            GLib.idle_add(self._show_update_bar,
+                          f"\U000f06b0  Updated to the {info['date']} version — restart Physics Feed to use it" if ok else
+                          "\U000f06b0  An update is available — click to install")
+        threading.Thread(target=work, daemon=True).start()
+
+    def _show_update_bar(self, text):
+        self.update_bar.set_label(text)
+        self.update_bar.set_no_show_all(False)
+        self.update_bar.show_all()
+        return False
+
+    def _updates_dialog(self):
+        dlg = Gtk.Dialog(title="Updates", transient_for=self, modal=True)
+        dlg.set_default_size(480, 300)
+        dlg.get_style_context().add_class("topics-dialog")
+        box = dlg.get_content_area()
+        box.set_border_width(16)
+        box.set_spacing(10)
+        inst = updater.installed()
+        lab = Gtk.Label(xalign=0, wrap=True, selectable=True)
+        lab.get_style_context().add_class("help-text")
+        box.pack_start(lab, False, False, 0)
+        row = Gtk.Box(spacing=10)
+        sw = Gtk.Switch(active=self.state.get("auto_update", True), valign=Gtk.Align.CENTER)
+        row.pack_start(sw, False, False, 0)
+        row.pack_start(Gtk.Label(label="Update automatically (checks twice a day, installs new versions)", xalign=0,
+                                 wrap=True), True, True, 0)
+        box.pack_start(row, False, False, 0)
+        status = Gtk.Label(xalign=0, wrap=True)
+        status.get_style_context().add_class("subtitle")
+        box.pack_start(status, False, False, 0)
+        btns = Gtk.Box(spacing=8)
+        check = self._pill("Check now", None)
+        go = self._pill("Update now", None, primary=True)
+        go.set_sensitive(False)
+        btns.pack_start(check, False, False, 0)
+        btns.pack_start(go, False, False, 0)
+        box.pack_start(btns, False, False, 0)
+        found = {}
+
+        def describe():
+            if not inst:
+                lab.set_text(f"Physics Feed {__version__}, running from a source folder.\n"
+                             "Update it there with:  git pull && ./install.sh")
+            else:
+                lab.set_text(f"Physics Feed {__version__} · installed {inst.get('date', '?')} "
+                             f"(version {inst.get('commit', '')[:7] or 'unknown'})\nUpdates come from github.com/{updater.REPO}")
+        describe()
+
+        def on_switch(w, _p):
+            self.state["auto_update"] = w.get_active()
+            self._save_state()
+        sw.connect("notify::active", on_switch)
+
+        def do_check(*_):
+            status.set_text("checking…")
+            check.set_sensitive(False)
+
+            def work():
+                try:
+                    newer, info = updater.update_available()
+                    msg = (f"New version from {info['date']}: {info['message']}" if newer else "You have the newest version.")
+                except Exception as e:
+                    newer, info, msg = False, {}, f"couldn't reach GitHub: {e}"
+                GLib.idle_add(done, newer, info, msg)
+
+            def done(newer, info, msg):
+                status.set_text(msg)
+                check.set_sensitive(True)
+                go.set_sensitive(newer and bool(inst))
+                found.update(info)
+                return False
+            threading.Thread(target=work, daemon=True).start()
+        check.connect("clicked", do_check)
+
+        def do_update(*_):
+            status.set_text("downloading and installing…")
+            go.set_sensitive(False)
+
+            def work():
+                try:
+                    ok, log = updater.install(found["commit"])
+                except Exception as e:
+                    ok, log = False, str(e)
+                GLib.idle_add(done, ok, log)
+
+            def done(ok, log):
+                status.set_text("Updated. Close and reopen Physics Feed to use the new version." if ok
+                                else "The update failed:\n" + log[-400:])
+                if ok:
+                    self._show_update_bar("\U000f06b0  Updated — restart Physics Feed to use the new version")
+                return False
+            threading.Thread(target=work, daemon=True).start()
+        go.connect("clicked", do_update)
+        dlg.add_button("Close", Gtk.ResponseType.CLOSE)
+        for b in dlg.get_action_area().get_children():
+            b.get_style_context().add_class("pill")
+        dlg.show_all()
+        do_check()
+        dlg.run()
+        dlg.destroy()
 
     # ---------- dark / light
     def _apply_theme(self):

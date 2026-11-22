@@ -1,0 +1,1107 @@
+{
+ "journals": {
+  "PRL": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prl.xml",
+   "oa": false
+  },
+  "PRB": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prb.xml",
+   "oa": false
+  },
+  "PRX": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prx.xml",
+   "oa": true
+  },
+  "PRA": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/pra.xml",
+   "oa": false
+  },
+  "PRE": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/pre.xml",
+   "oa": false
+  },
+  "PRD": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prd.xml",
+   "oa": false
+  },
+  "PRC": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prc.xml",
+   "oa": false
+  },
+  "PR Research": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prresearch.xml",
+   "oa": true
+  },
+  "PRX Quantum": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prxquantum.xml",
+   "oa": true
+  },
+  "PR Materials": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prmaterials.xml",
+   "oa": false
+  },
+  "PR Applied": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prapplied.xml",
+   "oa": false
+  },
+  "PR Fluids": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/prfluids.xml",
+   "oa": false
+  },
+  "Rev. Mod. Phys.": {
+   "group": "APS",
+   "source": "http://feeds.aps.org/rss/recent/rmp.xml",
+   "oa": false
+  },
+  "Nature": {
+   "group": "Nature",
+   "source": "crossref:1476-4687",
+   "oa": false
+  },
+  "Nature Physics": {
+   "group": "Nature",
+   "source": "crossref:1745-2481",
+   "oa": false
+  },
+  "Nature Photonics": {
+   "group": "Nature",
+   "source": "crossref:1749-4893",
+   "oa": false
+  },
+  "Nature Materials": {
+   "group": "Nature",
+   "source": "crossref:1476-4660",
+   "oa": false
+  },
+  "Nature Nanotechnology": {
+   "group": "Nature",
+   "source": "crossref:1748-3395",
+   "oa": false
+  },
+  "Nature Reviews Physics": {
+   "group": "Nature",
+   "source": "crossref:2522-5820",
+   "oa": false
+  },
+  "Nature Communications": {
+   "group": "Nature",
+   "source": "crossref:2041-1723",
+   "oa": true
+  },
+  "Communications Physics": {
+   "group": "Nature",
+   "source": "crossref:2399-3650",
+   "oa": true
+  },
+  "npj Quantum Materials": {
+   "group": "Nature",
+   "source": "crossref:2397-4648",
+   "oa": true
+  },
+  "npj Quantum Information": {
+   "group": "Nature",
+   "source": "crossref:2056-6387",
+   "oa": true
+  },
+  "npj Computational Materials": {
+   "group": "Nature",
+   "source": "crossref:2057-3960",
+   "oa": true
+  },
+  "Scientific Reports": {
+   "group": "Nature",
+   "source": "crossref:2045-2322",
+   "oa": true
+  },
+  "Light: Science & Applications": {
+   "group": "Nature",
+   "source": "crossref:2047-7538",
+   "oa": true
+  },
+  "Science": {
+   "group": "Science & PNAS",
+   "source": "crossref:1095-9203",
+   "oa": false
+  },
+  "Science Advances": {
+   "group": "Science & PNAS",
+   "source": "crossref:2375-2548",
+   "oa": true
+  },
+  "PNAS": {
+   "group": "Science & PNAS",
+   "source": "crossref:1091-6490",
+   "oa": false
+  },
+  "J. Phys.: Condens. Matter": {
+   "group": "IOP",
+   "source": "crossref:1361-648X",
+   "oa": false
+  },
+  "J. Phys. A: Math. Theor.": {
+   "group": "IOP",
+   "source": "crossref:1751-8121",
+   "oa": false
+  },
+  "New J. Phys.": {
+   "group": "IOP",
+   "source": "crossref:1367-2630",
+   "oa": true
+  },
+  "Rep. Prog. Phys.": {
+   "group": "IOP",
+   "source": "crossref:1361-6633",
+   "oa": false
+  },
+  "J. Stat. Mech.": {
+   "group": "IOP",
+   "source": "crossref:1742-5468",
+   "oa": false
+  },
+  "J. Phys.: Photonics": {
+   "group": "IOP",
+   "source": "crossref:2515-7647",
+   "oa": true
+  },
+  "J. Optics": {
+   "group": "IOP",
+   "source": "crossref:2040-8986",
+   "oa": false
+  },
+  "2D Materials": {
+   "group": "IOP",
+   "source": "crossref:2053-1583",
+   "oa": false
+  },
+  "EPL": {
+   "group": "IOP",
+   "source": "crossref:1286-4854",
+   "oa": false
+  },
+  "J. Phys. Commun.": {
+   "group": "IOP",
+   "source": "crossref:2399-6528",
+   "oa": true
+  },
+  "Quantum Sci. Technol.": {
+   "group": "IOP",
+   "source": "crossref:2058-9565",
+   "oa": false
+  },
+  "Supercond. Sci. Technol.": {
+   "group": "IOP",
+   "source": "crossref:1361-6668",
+   "oa": false
+  },
+  "Mach. Learn.: Sci. Technol.": {
+   "group": "IOP",
+   "source": "crossref:2632-2153",
+   "oa": true
+  },
+  "Applied Physics Letters": {
+   "group": "AIP",
+   "source": "https://pubs.aip.org/rss/site_1000017/1000011.xml",
+   "oa": false
+  },
+  "J. Chem. Phys.": {
+   "group": "AIP",
+   "source": "https://pubs.aip.org/rss/site_1000043/1000024.xml",
+   "oa": false
+  },
+  "J. Math. Phys.": {
+   "group": "AIP",
+   "source": "crossref:1089-7658",
+   "oa": false
+  },
+  "J. Appl. Phys.": {
+   "group": "AIP",
+   "source": "crossref:1089-7550",
+   "oa": false
+  },
+  "APL Photonics": {
+   "group": "AIP",
+   "source": "crossref:2378-0967",
+   "oa": true
+  },
+  "AIP Advances": {
+   "group": "AIP",
+   "source": "crossref:2158-3226",
+   "oa": true
+  },
+  "Chaos": {
+   "group": "AIP",
+   "source": "crossref:1089-7682",
+   "oa": false
+  },
+  "Commun. Math. Phys.": {
+   "group": "Springer",
+   "source": "crossref:1432-0916",
+   "oa": false
+  },
+  "Lett. Math. Phys.": {
+   "group": "Springer",
+   "source": "crossref:1573-0530",
+   "oa": false
+  },
+  "Ann. Henri Poincaré": {
+   "group": "Springer",
+   "source": "crossref:1424-0661",
+   "oa": false
+  },
+  "J. Stat. Phys.": {
+   "group": "Springer",
+   "source": "crossref:1572-9613",
+   "oa": false
+  },
+  "Eur. Phys. J. B": {
+   "group": "Springer",
+   "source": "crossref:1434-6036",
+   "oa": false
+  },
+  "Eur. Phys. J. Plus": {
+   "group": "Springer",
+   "source": "crossref:2190-5444",
+   "oa": false
+  },
+  "J. Low Temp. Phys.": {
+   "group": "Springer",
+   "source": "crossref:1573-7357",
+   "oa": false
+  },
+  "Phys. Rep.": {
+   "group": "Elsevier",
+   "source": "crossref:0370-1573",
+   "oa": false
+  },
+  "Annals of Physics": {
+   "group": "Elsevier",
+   "source": "crossref:1096-035X",
+   "oa": false
+  },
+  "Physica A": {
+   "group": "Elsevier",
+   "source": "crossref:1873-2119",
+   "oa": false
+  },
+  "Physica B": {
+   "group": "Elsevier",
+   "source": "crossref:1873-2135",
+   "oa": false
+  },
+  "Physica C": {
+   "group": "Elsevier",
+   "source": "crossref:1873-2143",
+   "oa": false
+  },
+  "Phys. Lett. A": {
+   "group": "Elsevier",
+   "source": "crossref:1873-2429",
+   "oa": false
+  },
+  "J. Magn. Magn. Mater.": {
+   "group": "Elsevier",
+   "source": "crossref:1873-4766",
+   "oa": false
+  },
+  "Nucl. Phys. B": {
+   "group": "Elsevier",
+   "source": "crossref:0550-3213",
+   "oa": true
+  },
+  "Comput. Phys. Commun.": {
+   "group": "Elsevier",
+   "source": "crossref:1879-2944",
+   "oa": false
+  },
+  "Optica": {
+   "group": "Optica",
+   "source": "crossref:2334-2536",
+   "oa": true
+  },
+  "Optics Express": {
+   "group": "Optica",
+   "source": "crossref:1094-4087",
+   "oa": true
+  },
+  "Optics Letters": {
+   "group": "Optica",
+   "source": "crossref:1539-4794",
+   "oa": false
+  },
+  "Nano Letters": {
+   "group": "ACS",
+   "source": "crossref:1530-6992",
+   "oa": false
+  },
+  "ACS Nano": {
+   "group": "ACS",
+   "source": "crossref:1936-086X",
+   "oa": false
+  },
+  "ACS Photonics": {
+   "group": "ACS",
+   "source": "crossref:2330-4022",
+   "oa": false
+  },
+  "Soft Matter": {
+   "group": "RSC",
+   "source": "crossref:1744-6848",
+   "oa": false
+  },
+  "J. Fluid Mech.": {
+   "group": "Cambridge",
+   "source": "crossref:1469-7645",
+   "oa": false
+  },
+  "Advanced Materials": {
+   "group": "Wiley",
+   "source": "https://onlinelibrary.wiley.com/feed/15214095/most-recent",
+   "oa": false
+  },
+  "Adv. Theory & Simulations": {
+   "group": "Wiley",
+   "source": "https://onlinelibrary.wiley.com/feed/25130390/most-recent",
+   "oa": false
+  },
+  "Adv. Funct. Mater.": {
+   "group": "Wiley",
+   "source": "crossref:1616-3028",
+   "oa": false
+  },
+  "Adv. Quantum Technol.": {
+   "group": "Wiley",
+   "source": "crossref:2511-9044",
+   "oa": false
+  },
+  "Laser Photonics Rev.": {
+   "group": "Wiley",
+   "source": "crossref:1863-8899",
+   "oa": false
+  },
+  "phys. stat. sol. (b)": {
+   "group": "Wiley",
+   "source": "crossref:1521-3951",
+   "oa": false
+  },
+  "Quantum": {
+   "group": "Open journals",
+   "source": "https://quantum-journal.org/feed/",
+   "oa": true
+  },
+  "SciPost Physics": {
+   "group": "Open journals",
+   "source": "crossref:2542-4653",
+   "oa": true
+  },
+  "Pramana – J. Phys.": {
+   "group": "Indian",
+   "source": "crossref:0973-7111",
+   "oa": false
+  },
+  "Indian J. Phys.": {
+   "group": "Indian",
+   "source": "crossref:0974-9845",
+   "oa": false
+  },
+  "Current Science": {
+   "group": "Indian",
+   "source": "crossref:0011-3891",
+   "oa": true
+  },
+  "J. Indian Inst. Sci.": {
+   "group": "Indian",
+   "source": "crossref:0019-4964",
+   "oa": false
+  },
+  "Resonance": {
+   "group": "Indian",
+   "source": "crossref:0973-712X",
+   "oa": false
+  },
+  "Bull. Mater. Sci.": {
+   "group": "Indian",
+   "source": "crossref:0973-7669",
+   "oa": false
+  },
+  "Proc. INSA": {
+   "group": "Indian",
+   "source": "crossref:2454-9983",
+   "oa": false
+  }
+ },
+ "news": {
+  "Google Research blog": {
+   "group": "ML & AI",
+   "url": "https://blog.research.google/feeds/posts/default"
+  },
+  "Google DeepMind": {
+   "group": "ML & AI",
+   "url": "https://deepmind.google/blog/rss.xml"
+  },
+  "OpenAI news": {
+   "group": "ML & AI",
+   "url": "https://openai.com/news/rss.xml"
+  },
+  "Hugging Face blog": {
+   "group": "ML & AI",
+   "url": "https://huggingface.co/blog/feed.xml"
+  },
+  "Berkeley AI (BAIR)": {
+   "group": "ML & AI",
+   "url": "https://bair.berkeley.edu/blog/feed.xml"
+  },
+  "MIT Tech Review – AI": {
+   "group": "ML & AI",
+   "url": "https://www.technologyreview.com/topic/artificial-intelligence/feed"
+  },
+  "Physics (APS)": {
+   "group": "Physics news",
+   "url": "http://feeds.aps.org/rss/recent/physics.xml"
+  },
+  "Physics World": {
+   "group": "Physics news",
+   "url": "https://physicsworld.com/feed/"
+  },
+  "Quanta Magazine": {
+   "group": "Physics news",
+   "url": "https://www.quantamagazine.org/feed/"
+  },
+  "Phys.org – physics": {
+   "group": "Physics news",
+   "url": "https://phys.org/rss-feed/physics-news/"
+  },
+  "ScienceDaily – physics": {
+   "group": "Physics news",
+   "url": "https://www.sciencedaily.com/rss/matter_energy/physics.xml"
+  },
+  "The Hindu – Science": {
+   "group": "Indian science",
+   "url": "https://www.thehindu.com/sci-tech/science/feeder/default.rss"
+  },
+  "The Wire Science": {
+   "group": "Indian science",
+   "url": "https://science.thewire.in/feed/"
+  },
+  "PIB press releases (DST & others)": {
+   "group": "DST / PIB",
+   "url": "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3"
+  }
+ },
+ "fields": {
+  "Condensed matter theory": {
+   "topics": {
+    "Strongly correlated": [
+     "strongly correlated",
+     "correlated electron",
+     "heavy fermion",
+     "Mott",
+     "Hubbard"
+    ],
+    "Quantum magnetism": [
+     "quantum magnet",
+     "spin liquid",
+     "frustrated magnet",
+     "Heisenberg model",
+     "Kitaev",
+     "altermagnet"
+    ],
+    "Topological matter": [
+     "topological insulator",
+     "topological phase",
+     "Chern",
+     "Weyl",
+     "quantum Hall",
+     "Berry phase",
+     "edge state"
+    ],
+    "Superconductivity (theory)": [
+     "superconduct&pairing",
+     "BCS",
+     "unconventional superconduct",
+     "Eliashberg",
+     "Bogoliubov"
+    ],
+    "Many-body methods": [
+     "DMFT",
+     "DMRG",
+     "quantum Monte Carlo",
+     "tensor network",
+     "functional renormalization",
+     "Green's function",
+     "diagrammatic"
+    ],
+    "Non-equilibrium & driven": [
+     "Floquet",
+     "quench",
+     "non-equilibrium",
+     "thermalization",
+     "prethermal"
+    ]
+   },
+   "journals": [
+    "PRB",
+    "PRL",
+    "PRX",
+    "PR Research",
+    "J. Phys.: Condens. Matter",
+    "npj Quantum Materials"
+   ],
+   "arxiv": [
+    "cond-mat.str-el",
+    "cond-mat.mes-hall"
+   ]
+  },
+  "Condensed matter experiment": {
+   "topics": {
+    "ARPES & spectroscopy": [
+     "ARPES",
+     "photoemission",
+     "Raman",
+     "optical conductivity",
+     "infrared spectroscopy"
+    ],
+    "STM / STS": [
+     "scanning tunneling",
+     "STM",
+     "STS",
+     "quasiparticle interference"
+    ],
+    "Neutron & X-ray scattering": [
+     "neutron scattering",
+     "inelastic neutron",
+     "RIXS",
+     "X-ray diffraction",
+     "resonant X-ray"
+    ],
+    "Transport & thermodynamics": [
+     "magnetoresistance",
+     "Hall effect",
+     "thermal conductivity",
+     "specific heat",
+     "quantum oscillation",
+     "de Haas"
+    ],
+    "Ultrafast & pump-probe": [
+     "ultrafast",
+     "pump-probe",
+     "time-resolved",
+     "femtosecond"
+    ],
+    "Thin films & growth": [
+     "thin film",
+     "MBE",
+     "molecular beam epitaxy",
+     "heterostructure",
+     "epitaxial"
+    ],
+    "High pressure": [
+     "high pressure",
+     "diamond anvil"
+    ],
+    "NMR / μSR": [
+     "NMR",
+     "nuclear magnetic resonance",
+     "muon spin",
+     "μSR",
+     "muSR"
+    ]
+   },
+   "journals": [
+    "PRB",
+    "PRL",
+    "Nature Physics",
+    "Nature Materials",
+    "PR Materials",
+    "Advanced Materials",
+    "Nano Letters",
+    "Applied Physics Letters"
+   ],
+   "arxiv": [
+    "cond-mat.str-el",
+    "cond-mat.mtrl-sci",
+    "cond-mat.supr-con"
+   ]
+  },
+  "Superconductivity": {
+   "topics": {
+    "Cuprates": [
+     "cuprate",
+     "YBCO",
+     "LSCO",
+     "Bi2212"
+    ],
+    "Nickelates & iron-based": [
+     "nickelate",
+     "iron-based superconduct",
+     "pnictide",
+     "FeSe"
+    ],
+    "Superconductivity": [
+     "superconduct",
+     "Josephson",
+     "Cooper pair",
+     "Meissner",
+     "vortex lattice"
+    ]
+   },
+   "journals": [
+    "PRB",
+    "PRL",
+    "Supercond. Sci. Technol.",
+    "Physica C",
+    "Nature Physics"
+   ],
+   "arxiv": [
+    "cond-mat.supr-con"
+   ]
+  },
+  "Magnetism & spintronics": {
+   "topics": {
+    "Spintronics": [
+     "spintronic",
+     "spin-orbit torque",
+     "spin current",
+     "spin Hall",
+     "magnetic tunnel junction"
+    ],
+    "Magnons & skyrmions": [
+     "magnon",
+     "skyrmion",
+     "spin wave",
+     "magnonic"
+    ],
+    "Frustration & spin liquids": [
+     "spin liquid",
+     "frustrat",
+     "kagome",
+     "pyrochlore",
+     "spin ice"
+    ]
+   },
+   "journals": [
+    "PRB",
+    "J. Magn. Magn. Mater.",
+    "PR Applied",
+    "Applied Physics Letters"
+   ],
+   "arxiv": [
+    "cond-mat.str-el",
+    "cond-mat.mtrl-sci"
+   ]
+  },
+  "2D materials & moiré": {
+   "topics": {
+    "Graphene & moiré": [
+     "graphene",
+     "twisted bilayer",
+     "moiré",
+     "moire",
+     "magic angle"
+    ],
+    "TMDs & van der Waals": [
+     "transition metal dichalcogenide",
+     "TMD",
+     "MoS2",
+     "WSe2",
+     "van der Waals",
+     "hBN"
+    ]
+   },
+   "journals": [
+    "2D Materials",
+    "Nano Letters",
+    "ACS Nano",
+    "Nature Nanotechnology",
+    "PRB"
+   ],
+   "arxiv": [
+    "cond-mat.mes-hall",
+    "cond-mat.mtrl-sci"
+   ]
+  },
+  "Soft matter & biophysics": {
+   "topics": {
+    "Active matter": [
+     "active matter",
+     "self-propelled",
+     "active particle",
+     "motility",
+     "swimmer"
+    ],
+    "Colloids & polymers": [
+     "colloid",
+     "polymer",
+     "gel",
+     "rheology",
+     "liquid crystal"
+    ],
+    "Glasses & granular": [
+     "glass transition",
+     "jamming",
+     "granular",
+     "amorphous",
+     "supercooled"
+    ],
+    "Biophysics": [
+     "biophysic",
+     "membrane",
+     "protein",
+     "cell mechanics",
+     "DNA"
+    ]
+   },
+   "journals": [
+    "Soft Matter",
+    "PRE",
+    "PR Fluids",
+    "J. Fluid Mech.",
+    "PNAS"
+   ],
+   "arxiv": [
+    "cond-mat.soft",
+    "physics.bio-ph"
+   ]
+  },
+  "Statistical mechanics": {
+   "topics": {
+    "Non-equilibrium stat mech": [
+     "non-equilibrium",
+     "nonequilibrium",
+     "stochastic thermodynamics",
+     "entropy production",
+     "fluctuation theorem",
+     "large deviation"
+    ],
+    "Phase transitions & criticality": [
+     "phase transition",
+     "critical exponent",
+     "critical phenomena",
+     "universality class",
+     "renormalization group",
+     "Ising"
+    ],
+    "Stochastic processes": [
+     "stochastic process",
+     "random walk",
+     "Brownian",
+     "Langevin",
+     "first passage",
+     "diffusion"
+    ],
+    "Interface growth & KPZ": [
+     "KPZ",
+     "Kardar-Parisi-Zhang",
+     "interface growth"
+    ],
+    "Random matrices & disorder": [
+     "random matrix",
+     "spin glass",
+     "replica",
+     "disordered system"
+    ],
+    "Mpemba & anomalous relaxation": [
+     "Mpemba",
+     "anomalous relaxation"
+    ]
+   },
+   "journals": [
+    "PRE",
+    "J. Stat. Mech.",
+    "J. Stat. Phys.",
+    "Physica A",
+    "J. Phys. A: Math. Theor.",
+    "EPL"
+   ],
+   "arxiv": [
+    "cond-mat.stat-mech"
+   ]
+  },
+  "AMO & cold atoms": {
+   "topics": {
+    "Cold atoms": [
+     "ultracold",
+     "cold atom",
+     "optical lattice",
+     "Bose-Einstein condensate",
+     "Feshbach"
+    ],
+    "Rydberg & trapped ions": [
+     "Rydberg",
+     "trapped ion",
+     "optical tweezer"
+    ]
+   },
+   "journals": [
+    "PRA",
+    "PRL",
+    "PRX Quantum",
+    "New J. Phys."
+   ],
+   "arxiv": [
+    "cond-mat.quant-gas",
+    "physics.atom-ph"
+   ]
+  },
+  "Quantum information & computing": {
+   "topics": {
+    "Quantum computing": [
+     "qubit",
+     "quantum computing",
+     "quantum processor",
+     "quantum advantage",
+     "variational quantum"
+    ],
+    "Error correction": [
+     "quantum error correction",
+     "surface code",
+     "logical qubit",
+     "fault-tolerant"
+    ],
+    "Entanglement": [
+     "entanglement",
+     "Bell inequality",
+     "quantum correlation",
+     "entanglement entropy"
+    ],
+    "Quantum simulation": [
+     "quantum simulation",
+     "quantum simulator",
+     "analog quantum"
+    ]
+   },
+   "journals": [
+    "PRX Quantum",
+    "Quantum",
+    "npj Quantum Information",
+    "Quantum Sci. Technol.",
+    "PRA"
+   ],
+   "arxiv": [
+    "quant-ph"
+   ]
+  },
+  "Photonics & optics": {
+   "topics": {
+    "Topological photonics": [
+     "topological photonic",
+     "photonic topological",
+     "valley photonic"
+    ],
+    "Nanophotonics & metamaterials": [
+     "metamaterial",
+     "metasurface",
+     "nanophotonic",
+     "plasmon"
+    ],
+    "Lasers & nonlinear optics": [
+     "laser",
+     "nonlinear optic",
+     "frequency comb",
+     "soliton"
+    ],
+    "Photonics": [
+     "photonic",
+     "waveguide",
+     "optical cavity",
+     "photonic crystal"
+    ]
+   },
+   "journals": [
+    "Optica",
+    "Optics Express",
+    "Optics Letters",
+    "Nature Photonics",
+    "Light: Science & Applications",
+    "ACS Photonics",
+    "Laser Photonics Rev.",
+    "J. Phys.: Photonics",
+    "APL Photonics"
+   ],
+   "arxiv": [
+    "physics.optics"
+   ]
+  },
+  "Materials & computation": {
+   "topics": {
+    "DFT & electronic structure": [
+     "DFT",
+     "density functional",
+     "first-principles",
+     "ab initio",
+     "electronic structure",
+     "band structure"
+    ],
+    "Phonons & thermal": [
+     "phonon",
+     "thermal conductivity",
+     "thermoelectric",
+     "electron-phonon"
+    ],
+    "ML potentials & high-throughput": [
+     "machine learning potential",
+     "interatomic potential",
+     "high-throughput",
+     "materials discovery"
+    ]
+   },
+   "journals": [
+    "npj Computational Materials",
+    "PR Materials",
+    "Comput. Phys. Commun.",
+    "PRB",
+    "Adv. Theory & Simulations"
+   ],
+   "arxiv": [
+    "cond-mat.mtrl-sci",
+    "physics.comp-ph"
+   ]
+  },
+  "Machine learning for physics": {
+   "topics": {
+    "ML in physics": [
+     "machine learning",
+     "neural network",
+     "deep learning",
+     "neural quantum state",
+     "physics-informed",
+     "generative model",
+     "transformer"
+    ]
+   },
+   "journals": [
+    "Mach. Learn.: Sci. Technol.",
+    "npj Computational Materials",
+    "PR Research"
+   ],
+   "arxiv": [
+    "physics.comp-ph",
+    "cs.LG"
+   ]
+  },
+  "Mathematical physics": {
+   "topics": {
+    "Integrability": [
+     "integrable",
+     "Bethe ansatz",
+     "Yang-Baxter",
+     "exactly solvable"
+    ],
+    "CFT & operator algebras": [
+     "conformal field theory",
+     "CFT",
+     "operator algebra",
+     "vertex algebra"
+    ],
+    "Spectral & random matrix theory": [
+     "spectral theory",
+     "random matrix",
+     "Schrödinger operator"
+    ]
+   },
+   "journals": [
+    "Commun. Math. Phys.",
+    "J. Math. Phys.",
+    "Lett. Math. Phys.",
+    "Ann. Henri Poincaré",
+    "J. Phys. A: Math. Theor.",
+    "J. Stat. Phys."
+   ],
+   "arxiv": [
+    "math-ph"
+   ]
+  },
+  "High energy & gravity": {
+   "topics": {
+    "Holography & strings": [
+     "holograph",
+     "AdS/CFT",
+     "string theory",
+     "black hole",
+     "gauge theory"
+    ],
+    "Particle phenomenology": [
+     "dark matter",
+     "neutrino",
+     "Higgs",
+     "beyond the Standard Model"
+    ]
+   },
+   "journals": [
+    "PRD",
+    "Nucl. Phys. B",
+    "PRL"
+   ],
+   "arxiv": [
+    "hep-th",
+    "hep-ph",
+    "gr-qc"
+   ]
+  }
+ },
+ "search_journals": {
+  "PRL": "0031-9007",
+  "PRB": "2469-9950",
+  "PRX": "2160-3308",
+  "PRA": "2469-9926",
+  "PR Research": "2643-1564",
+  "PR Applied": "2331-7019",
+  "Rev. Mod. Phys.": "0034-6861",
+  "Nature": "0028-0836",
+  "Nature Physics": "1745-2473",
+  "Nature Photonics": "1749-4885",
+  "Nature Materials": "1476-1122",
+  "Nature Communications": "2041-1723",
+  "npj Quantum Materials": "2397-4648",
+  "Scientific Reports": "2045-2322",
+  "Science": "0036-8075",
+  "Science Advances": "2375-2548",
+  "Advanced Materials": "0935-9648",
+  "Adv. Theory & Simulations": "2513-0390",
+  "J. Phys.: Condens. Matter": "1361-648X",
+  "J. Phys. A: Math. Theor.": "1751-8121",
+  "New J. Phys.": "1367-2630",
+  "Rep. Prog. Phys.": "1361-6633",
+  "J. Phys.: Photonics": "2515-7647",
+  "J. Optics": "2040-8986",
+  "2D Materials": "2053-1583",
+  "EPL": "1286-4854",
+  "J. Math. Phys.": "1089-7658",
+  "Rev. Math. Phys.": "1793-6659",
+  "Commun. Math. Phys.": "1432-0916",
+  "Lett. Math. Phys.": "1573-0530",
+  "Ann. Henri Poincaré": "1424-0661",
+  "Quantum": "2521-327X",
+  "Applied Physics Letters": "1077-3118",
+  "Optica": "2334-2536",
+  "Light: Science & Applications": "2047-7538",
+  "Phys. Rep.": "0370-1573",
+  "Annals of Physics": "0003-4916",
+  "SciPost Physics": "2542-4653"
+ },
+ "default_news": {
+  "Physics (APS)": [
+   "http://feeds.aps.org/rss/recent/physics.xml",
+   "Physics news"
+  ],
+  "Physics World": [
+   "https://physicsworld.com/feed/",
+   "Physics news"
+  ],
+  "Quanta Magazine": [
+   "https://www.quantamagazine.org/feed/",
+   "Physics news"
+  ]
+ }
+}

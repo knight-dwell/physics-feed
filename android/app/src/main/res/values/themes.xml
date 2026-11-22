@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.PhysicsFeed" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="android:statusBarColor">@color/surface</item>
+        <item name="android:navigationBarColor">@color/surface</item>
+    </style>
+    <color name="surface">#111318</color>
+    <color name="accent">#ADC6FF</color>
+    <color name="amber">#F6C177</color>
+</resources>

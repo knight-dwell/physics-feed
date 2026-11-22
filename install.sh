@@ -134,6 +134,9 @@ rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR" "$BIN" "$DESKTOP_DIR" "$ICON_DIR"
 cp -r "$REPO/physics_feed" "$APP_DIR/"
 find "$APP_DIR" -name '__pycache__' -prune -exec rm -rf {} + 2>/dev/null || true
+# remember which version this is, for the in-app updater
+COMMIT="${PF_COMMIT:-$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo "")}"
+printf '{"commit": "%s", "date": "%s"}\n' "$COMMIT" "$(date +%F)" > "$APP_DIR/physics_feed/INSTALLED.json"
 cat > "$BIN/physics-feed" <<EOF
 #!/bin/sh
 # Physics Feed launcher (installed by physics-feed/install.sh)
