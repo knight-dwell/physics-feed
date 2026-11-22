@@ -92,6 +92,8 @@ CONF = RF.CONF
 STATE_DIR = os.path.join(os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share")), "physics-feed")
 STATE = os.path.join(STATE_DIR, "state.json")
 PAGE = 60
+FIRST = 12    # cards drawn at once; the rest follow in batches while you read
+BATCH = 12
 
 GROUP_ICON = {"Condensed matter": "\U000f0768", "Methods": "\U000f0493", "Topology": "\U000f0b7e",
               "Photonics": "\U000f0335"}
@@ -454,7 +456,9 @@ class Feed(Gtk.Window):
         self._narrow = None
         self.connect("size-allocate", self._on_size)
         self.connect("destroy", self._on_close)
-        self._load()
+        self.data = {"items": [], "groups": {}, "journals": []}
+        self.sub.set_text("loading…")
+        GLib.idle_add(lambda: self._load() or False, priority=GLib.PRIORITY_LOW)   # after the window is on screen
         mon = Gio.File.new_for_path(CACHE).monitor_file(Gio.FileMonitorFlags.NONE, None)
         mon.connect("changed", lambda *a: GLib.timeout_add(400, self._reload_once))
         self._mon = mon
@@ -681,10 +685,25 @@ class Feed(Gtk.Window):
             e = Gtk.Label(label=msg, margin=40)
             e.get_style_context().add_class("empty")
             self.cards.pack_start(e, False, False, 0)
-        for it in items[: self.shown]:
+        self._render_token = getattr(self, "_render_token", 0) + 1
+        tok, todo = self._render_token, items[: self.shown]
+        first, rest = todo[:FIRST], todo[FIRST:]
+        for it in first:
             self.cards.pack_start(self._card(it), False, False, 0)
         self.cards.show_all()
         self.scroll.get_vadjustment().set_value(0) if self.shown == PAGE else None
+
+        def more():   # the rest, a dozen at a time, without freezing the window
+            if tok != self._render_token or not rest:
+                return False
+            for it in rest[:BATCH]:
+                c = self._card(it)
+                self.cards.pack_start(c, False, False, 0)
+                c.show_all()
+            del rest[:BATCH]
+            return bool(rest)
+        if rest:
+            GLib.idle_add(more, priority=GLib.PRIORITY_LOW)
 
     def _card(self, it):
         ev = Gtk.EventBox()
@@ -901,18 +920,29 @@ class Feed(Gtk.Window):
             ab.pack_start(w, False, False, 0)
         abs_sw.add(ab)
         self.p_stack.add_named(abs_sw, "abstract")
-        if EvinceView:
-            self.ev_view = EvinceView.View()
-            sw = Gtk.ScrolledWindow()
-            sw.add(self.ev_view)
-            self.p_stack.add_named(sw, "pdf")
-        if WebKit2:
-            self.web = WebKit2.WebView()
-            self.p_stack.add_named(self.web, "web")
+        self._ev_view = self._web = None   # made the first time a PDF / page is shown (they are slow to create)
         box.pack_start(self.p_stack, True, True, 0)
         self._p_item = self._p_pdf = self._model = None
         self._p_token = 0
         return box
+
+    @property
+    def ev_view(self):
+        if self._ev_view is None and EvinceView:
+            self._ev_view = EvinceView.View()
+            sw = Gtk.ScrolledWindow()
+            sw.add(self._ev_view)
+            sw.show_all()
+            self.p_stack.add_named(sw, "pdf")
+        return self._ev_view
+
+    @property
+    def web(self):
+        if self._web is None and WebKit2:
+            self._web = WebKit2.WebView()
+            self._web.show()
+            self.p_stack.add_named(self._web, "web")
+        return self._web
 
     def _on_card_click(self, w, e, it, card):
         if e.button != 1:
