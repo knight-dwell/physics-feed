@@ -525,7 +525,8 @@ def main():
 
     def do_arxiv():
         last = old.get("arxiv_since")
-        since = (dt.date.fromisoformat(last) - dt.timedelta(days=2)).isoformat() if last else \
+        # arXiv indexes papers only when announced (none at weekends): look back 5 days, duplicates are skipped
+        since = (dt.date.fromisoformat(last) - dt.timedelta(days=5)).isoformat() if last else \
             (dt.date.today() - dt.timedelta(days=KEEP_DAYS)).isoformat()   # first run: back-fill KEEP_DAYS
         return fetch_arxiv(conf["arxiv_categories"], since)
 

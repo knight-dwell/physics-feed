@@ -283,13 +283,16 @@ private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean,
         loading -> Skeleton()
         list.isEmpty() -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp)) {
             if (refreshing && feed.items.isEmpty()) Skeleton()
-            else Text(
-                when {
-                    feed.items.isEmpty() -> "No papers yet. Pull down to fetch."
-                    v == View.Saved -> "Tap ☆ on a paper to keep it here."
-                    else -> "Nothing here yet."
-                }, color = MaterialTheme.colorScheme.outline,
-            )
+            else {
+                Text(
+                    when {
+                        feed.items.isEmpty() -> "No papers yet. Pull down to fetch."
+                        v == View.Saved -> "Tap ☆ on a paper to keep it here."
+                        else -> "Nothing here yet."
+                    }, color = MaterialTheme.colorScheme.outline,
+                )
+                if (v.kind != "folder" && v.kind != "flair" && v != View.Saved && v != View.News && v.kind != "newsgroup") OlderButton(vm)
+            }
         }
         state.newsCards -> CardStack(vm, list, onOpen, onPdf)
         else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {

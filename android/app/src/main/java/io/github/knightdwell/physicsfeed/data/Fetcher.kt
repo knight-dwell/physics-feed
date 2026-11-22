@@ -460,7 +460,9 @@ object Fetcher {
         val jobs = mutableListOf<kotlinx.coroutines.Deferred<*>>()
         jobs += async(Dispatchers.IO) {
             runCatching {
-                val since = if (old.arxivSince.isNotEmpty()) LocalDate.parse(old.arxivSince).minusDays(2) else today.minusDays(2)
+                // arXiv only indexes papers once they are announced (none at weekends), so always look back 5 days;
+                // papers we already have are skipped. First run: the whole feed window.
+                val since = if (old.arxivSince.isNotEmpty()) LocalDate.parse(old.arxivSince).minusDays(5) else today.minusDays(KEEP_DAYS)
                 fresh += fetchArxiv(conf.arxivCategories, since.toString())
                 arxivOk = true
             }.onFailure { errors["arXiv"] = it.message ?: "error" }
@@ -498,7 +500,8 @@ object Fetcher {
      *  (plain RSS feeds only ever list their newest items). Loaded papers are kept ~a week. */
     suspend fun fetchOlder(conf: Config, old: FeedData, days: Long = 2): Pair<FeedData, Int> = coroutineScope {
         val today = LocalDate.now()
-        val oldest = old.items.filter { it.kind != "news" && it.date.isNotEmpty() }.minOfOrNull { it.date }
+        // count back from the oldest arXiv paper (journal papers can be weeks old and would skip days)
+        val oldest = old.items.filter { it.kind == "arxiv" && it.date.isNotEmpty() }.minOfOrNull { it.date }
             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today.minusDays(KEEP_DAYS)
         val from = oldest.minusDays(days); val to = oldest.minusDays(1)
         val fresh = java.util.Collections.synchronizedList(mutableListOf<Paper>())

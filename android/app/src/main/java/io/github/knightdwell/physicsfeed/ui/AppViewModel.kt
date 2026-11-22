@@ -171,7 +171,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun oldestDate(): String = _feed.value.items.filter { it.kind != "news" && it.date.isNotEmpty() }.minOfOrNull { it.date } ?: ""
+    fun oldestDate(): String = _feed.value.items.filter { it.kind == "arxiv" && it.date.isNotEmpty() }.minOfOrNull { it.date } ?: ""
 
     fun loadFullAbstract(p: Paper, done: (String) -> Unit) {
         val cut = p.kind != "news" && (p.abstract.isEmpty() || p.abstract.endsWith("…") || p.abstract.endsWith("..."))
