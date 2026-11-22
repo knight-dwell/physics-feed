@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 import urllib.parse
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -46,18 +47,18 @@ DEFAULT_CONF = {
     "topics": {"Condensed matter theory": FIELDS["Condensed matter theory"]["topics"]},   # the welcome screen replaces this
     "arxiv_categories": ["cond-mat", "quant-ph", "hep-th", "physics.comp-ph", "physics.optics"],
     "news": {
-        "Physics (APS)": ["http://feeds.aps.org/rss/recent/physics.xml", "Physics news"],
+        "Physics (APS)": ["https://feeds.aps.org/rss/recent/physics.xml", "Physics news"],
         "Physics World": ["https://physicsworld.com/feed/", "Physics news"],
         "Quanta Magazine": ["https://www.quantamagazine.org/feed/", "Physics news"],
     },
     "journals": {
-        "PRL": ["http://feeds.aps.org/rss/recent/prl.xml", False],
-        "PRB": ["http://feeds.aps.org/rss/recent/prb.xml", False],
-        "PRX": ["http://feeds.aps.org/rss/recent/prx.xml", False],
-        "PR Research": ["http://feeds.aps.org/rss/recent/prresearch.xml", True],
-        "PRA": ["http://feeds.aps.org/rss/recent/pra.xml", True],
-        "PR Applied": ["http://feeds.aps.org/rss/recent/prapplied.xml", True],
-        "Rev. Mod. Phys.": ["http://feeds.aps.org/rss/recent/rmp.xml", False],
+        "PRL": ["https://feeds.aps.org/rss/recent/prl.xml", False],
+        "PRB": ["https://feeds.aps.org/rss/recent/prb.xml", False],
+        "PRX": ["https://feeds.aps.org/rss/recent/prx.xml", False],
+        "PR Research": ["https://feeds.aps.org/rss/recent/prresearch.xml", True],
+        "PRA": ["https://feeds.aps.org/rss/recent/pra.xml", True],
+        "PR Applied": ["https://feeds.aps.org/rss/recent/prapplied.xml", True],
+        "Rev. Mod. Phys.": ["https://feeds.aps.org/rss/recent/rmp.xml", False],
         "Nature": ["crossref", True, "1476-4687"],
         "Nature Physics": ["crossref", False, "1745-2481"],
         "Nature Photonics": ["crossref", False, "1749-4893"],
@@ -141,10 +142,24 @@ def match(text, compiled):
 
 
 # ---------- fetching ----------
+_CROSSREF = __import__("threading").Semaphore(2)   # Crossref allows only a couple of parallel requests
+
+
 def get(url, timeout=40, headers=None):
     req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+    gate = _CROSSREF if "api.crossref.org" in url else None
+    for attempt in range(4):
+        try:
+            if gate:
+                with gate:
+                    with urllib.request.urlopen(req, timeout=timeout) as r:
+                        return r.read()
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or attempt == 3:   # 429 = too many requests: wait and try again
+                raise
+            time.sleep(float(e.headers.get("Retry-After") or 2 * (attempt + 1)))
 
 
 def clean(s):
@@ -179,6 +194,20 @@ def parse_date(s):
     except (TypeError, ValueError):
         m = re.search(r"\d{4}-\d{2}-\d{2}", s)
         return m.group(0) if m else ""
+
+
+IMG = re.compile(r"""<img[^>]+src=["']([^"']+)["']""", re.I)
+OG = re.compile(r"""<meta[^>]+(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']""", re.I)
+OG2 = re.compile(r"""<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']""", re.I)
+
+
+def og_image(url):
+    """The article page's preview picture (og:image), reading only the start of the page."""
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        head = r.read(96 * 1024).decode("utf-8", "replace")
+    m = OG.search(head) or OG2.search(head)
+    return html.unescape(m.group(1)) if m else ""
 
 
 def find_doi(*texts):
@@ -218,9 +247,21 @@ def fetch_rss(name, url):
         abstract = re.sub(r"^[A-Z][\w .&]+, Volume \d+, Issue \d+[^.]*\.\s*", "", abstract)                 # Wiley head
         date = parse_date(child_text(it, "date", "pubDate", "published", "updated", "issued"))
         doi = find_doi(child_text(it, "doi", "identifier"), link)
-        out.append({"id": link, "source": name, "kind": "journal", "title": title,
-                    "authors": authors[:6], "abstract": abstract[:6000], "url": link, "doi": doi,
-                    "date": date or dt.date.today().isoformat()})
+        image = ""
+        for c in it:   # media:thumbnail / media:content / <enclosure type="image/...">
+            t = local(c.tag)
+            if c.get("url") and (t == "thumbnail" or t == "content" or (t == "enclosure" and (c.get("type") or "").startswith("image"))):
+                image = c.get("url")
+                break
+        if not image:
+            m = IMG.search(raw + " " + child_text(it, "encoded"))
+            image = m.group(1) if m else ""
+        item = {"id": link, "source": name, "kind": "journal", "title": title,
+                "authors": authors[:6], "abstract": abstract[:6000], "url": link, "doi": doi,
+                "date": date or dt.date.today().isoformat()}
+        if image:
+            item["image"] = html.unescape(image)
+        out.append(item)
     return out
 
 
@@ -416,6 +457,13 @@ def search_arxiv(text, field="all", cat="", sort="relevance", start=0, n=50, top
     return arxiv_entries(root), total
 
 
+def _safe(fn):
+    try:
+        return fn()
+    except Exception:
+        return ""
+
+
 def news_groups(conf):
     out = {}
     for name, (url, group) in conf.get("news", {}).items():
@@ -473,41 +521,59 @@ def main():
     old_ids = {i["id"] for i in old.get("items", [])}
     errors, fresh, arxiv_ok = {}, [], False
     today = dt.date.today().isoformat()
-    try:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def do_arxiv():
         last = old.get("arxiv_since")
         since = (dt.date.fromisoformat(last) - dt.timedelta(days=2)).isoformat() if last else \
             (dt.date.today() - dt.timedelta(days=KEEP_DAYS)).isoformat()   # first run: back-fill KEEP_DAYS
-        fresh += fetch_arxiv(conf["arxiv_categories"], since)
-        arxiv_ok = True
-    except Exception as e:
-        errors["arXiv"] = str(e)[:120]
-    jsince = (dt.date.today() - dt.timedelta(days=KEEP_DAYS)).isoformat()
-    for name, spec in conf["journals"].items():
+        return fetch_arxiv(conf["arxiv_categories"], since)
+
+    def do_journal(name, spec):
         url, filt = spec[0], spec[1]
-        try:
-            keep = int(spec[4]) if len(spec) > 4 and spec[4] else KEEP_DAYS   # monthly journals: keep longer
-            since_j = (dt.date.today() - dt.timedelta(days=keep)).isoformat()
-            got = fetch_crossref(name, spec[2], since_j) if url == "crossref" else fetch_rss(name, url)
-            oa = len(spec) > 3 and bool(spec[3])
-            for g in got:
-                g["filtered"] = bool(filt)
-                if keep != KEEP_DAYS:
-                    g["keep"] = keep
-                if oa:
-                    g["oa"] = True
-            fresh += got
-            time.sleep(1.5)
-        except Exception as e:
-            errors[name] = str(e)[:120]
-    for name, (url, group) in conf.get("news", {}).items():   # news: never filtered, never tagged
-        try:
-            got = [g for g in fetch_rss(name, url) if g["date"] >= jsince][:60]
-            for g in got:
-                g.update(kind="news", group=group, abstract=g["abstract"][:1500])
-            fresh += got
-            time.sleep(1)
-        except Exception as e:
-            errors[name] = str(e)[:120]
+        keep = int(spec[4]) if len(spec) > 4 and spec[4] else KEEP_DAYS   # monthly journals: keep longer
+        since_j = (dt.date.today() - dt.timedelta(days=keep)).isoformat()
+        got = fetch_crossref(name, spec[2], since_j) if url == "crossref" else fetch_rss(name, url)
+        oa = len(spec) > 3 and bool(spec[3])
+        for g in got:
+            g["filtered"] = bool(filt)
+            if oa:
+                g["oa"] = True
+            if keep != KEEP_DAYS:
+                g["keep"] = keep
+        return got
+
+    jsince = (dt.date.today() - dt.timedelta(days=KEEP_DAYS)).isoformat()
+    old_img = {i["url"]: i["image"] for i in old.get("items", []) if i.get("image")}
+
+    def do_news(name, url, group):
+        got = [g for g in fetch_rss(name, url) if g["date"] >= jsince][:60]
+        for g in got:
+            g.update(kind="news", group=group, abstract=g["abstract"][:1500])
+            if not g.get("image"):   # no picture in the feed: the article's preview image (once)
+                g["image"] = old_img.get(g["url"]) or (lambda u: (lambda: og_image(u)))(g["url"])
+        return got
+
+    # everything in parallel (8 at a time): a few seconds instead of minutes
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futs = {pool.submit(do_arxiv): "arXiv"}
+        for name, spec in conf["journals"].items():
+            futs[pool.submit(do_journal, name, spec)] = name
+        for name, (url, group) in conf.get("news", {}).items():
+            futs[pool.submit(do_news, name, url, group)] = name
+        for f, name in futs.items():
+            try:
+                fresh += f.result()
+                if name == "arXiv":
+                    arxiv_ok = True
+            except Exception as e:
+                errors[name] = str(e)[:120]
+        # preview pictures for news, also in parallel
+        lazy = [g for g in fresh if callable(g.get("image"))]
+        for g, img in zip(lazy, pool.map(lambda g: _safe(g["image"]), lazy)):
+            g["image"] = img
+            if not img:
+                g.pop("image")
     by_id = {i["id"]: i for i in old.get("items", [])}
     jdoi = {i["doi"].lower(): i["id"] for i in by_id.values() if i.get("doi") and i["kind"] == "journal"}
     for it in fresh:

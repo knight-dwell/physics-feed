@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarBorder
@@ -56,9 +57,10 @@ import io.github.knightdwell.physicsfeed.data.Paper
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-/** News as a stack of cards: swipe left for the next one, right to go back. Springy, but cheap (graphicsLayer only). */
+/** Papers or news as a stack of cards: swipe left for the next one, right to go back.
+ *  Springy, but cheap (graphicsLayer only). The cards are a compact size, centred, not full screen. */
 @Composable
-fun NewsStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit) {
+fun CardStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit, onPdf: (Paper) -> Unit) {
     val ctx = LocalContext.current
     val state by vm.state.collectAsState()
     val imgs by vm.images.collectAsState()
@@ -67,10 +69,12 @@ fun NewsStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit) {
     val scope = rememberCoroutineScope()
     if (items.isEmpty()) return
 
-    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 10.dp)) {
         val w = constraints.maxWidth.toFloat()
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+        val cardH = (maxHeight * 0.62f).coerceAtMost(460.dp)
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.weight(0.3f))
+            Box(Modifier.height(cardH).fillMaxWidth()) {
                 // up to three cards: the ones underneath peek out, smaller and lower
                 for (depth in 2 downTo 0) {
                     val i = index + depth
@@ -108,11 +112,13 @@ fun NewsStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit) {
                             ) { change, dx -> change.consume(); scope.launch { drag.snapTo(drag.value + dx) } }
                         } else Modifier),
                     ) {
-                        NewsCard(p, image = p.image.ifEmpty { imgs[p.url] ?: "" }, onOpen = { onOpen(p) })
+                        val img = p.image.ifEmpty { imgs[p.url] ?: "" }
+                        if (p.kind == "news") NewsCard(p, image = img, onOpen = { onOpen(p) })
+                        else PaperStackCard(p, image = img, saved = state.saved[p.id], onOpen = { onOpen(p) })
                     }
                 }
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(40.dp))   // room for the cards peeking out underneath
             val cur = items.getOrNull(index)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 FilledTonalIconButton(onClick = { if (index > 0) scope.launch { drag.animateTo(w, tween(180)); index--; drag.snapTo(0f) } }, enabled = index > 0) {
@@ -125,11 +131,53 @@ fun NewsStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit) {
                             tint = if (state.saved.containsKey(cur.id)) Color(0xFFF6C177) else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     FilledTonalIconButton(onClick = { sharePaper(ctx, cur) }) { Icon(Icons.Filled.Share, "Share") }
-                    FilledTonalIconButton(onClick = { openUrl(ctx, cur.url) }) { Icon(Icons.AutoMirrored.Filled.OpenInNew, "Read the article") }
+                    if (cur.kind != "news" && (cur.pdf.isNotEmpty() || cur.oa)) {
+                        FilledTonalIconButton(onClick = { onPdf(cur) }) { Icon(Icons.Filled.PictureAsPdf, "Read the PDF") }
+                    }
+                    FilledTonalIconButton(onClick = { if (cur.kind == "news") openUrl(ctx, cur.url) else onOpen(cur) }) {
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, if (cur.kind == "news") "Read the article" else "Abstract and more")
+                    }
                 }
             }
-            Text("swipe ← for the next story, → to go back", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp, bottom = 4.dp))
+            Text("swipe ← for the next one, → to go back · tap a card to open it", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.weight(0.7f))
+        }
+    }
+}
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PaperStackCard(p: Paper, image: String, saved: Paper?, onOpen: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val dark = cs.surface.red < 0.5f
+    Surface(onClick = onOpen, shape = RoundedCornerShape(24.dp), color = cs.surfaceContainer, tonalElevation = 2.dp,
+        shadowElevation = 6.dp, modifier = Modifier.fillMaxSize()) {
+        Column {
+            if (image.isNotEmpty()) AsyncImage(model = image, contentDescription = null, contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxWidth().height(120.dp))
+            Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val (bg, fg) = sourceColors(p.source, dark)
+                    Tag(p.source + if (p.category.isNotEmpty()) " · ${p.category}" else "", bg, fg)
+                    if (p.oa) { Spacer(Modifier.size(4.dp)); Tag("open", cs.secondaryContainer, cs.onSecondaryContainer) }
+                    Spacer(Modifier.weight(1f))
+                    Text(p.date, fontSize = 11.sp, color = cs.outline)
+                }
+                val own = (saved?.folders?.map { "▤ $it" } ?: emptyList()) + (saved?.flairs?.map { "#$it" } ?: emptyList())
+                if (p.topics.isNotEmpty() || own.isNotEmpty()) androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(top = 8.dp)) {
+                    own.forEach { Tag(it, cs.tertiaryContainer, cs.onTertiaryContainer) }
+                    p.topics.take(3).forEach { Tag(it, cs.primaryContainer, cs.onPrimaryContainer) }
+                }
+                Text(tex2text(p.title), fontSize = 19.sp, fontWeight = FontWeight.Bold, lineHeight = 25.sp, color = cs.onSurface,
+                    maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
+                if (p.authors.isNotEmpty()) Text(p.authors.joinToString(", ") + if (p.authors.size >= 6) " et al." else "",
+                    fontSize = 13.sp, color = cs.primary, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                if (p.abstract.isNotEmpty()) Text(tex2text(p.abstract), fontSize = 13.sp, lineHeight = 19.sp, color = cs.onSurfaceVariant,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 10.dp))
+            }
         }
     }
 }

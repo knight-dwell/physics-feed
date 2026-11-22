@@ -79,16 +79,17 @@ class MainActivity : ComponentActivity() {
         handleLink(intent)
     }
 
-    /** wavepacket://view/<foryou|today|saved|oa|news|all>, wavepacket://source/<journal>, wavepacket://screen/<search|topics|journals> */
+    /** physicsfeed://view/<foryou|today|saved|oa|news|all>, physicsfeed://source/<journal>, physicsfeed://screen/<search|topics|journals> */
     private fun handleLink(i: android.content.Intent?) {
         val u = i?.data ?: return
-        if (u.scheme != "wavepacket") return
+        if (u.scheme != "physicsfeed") return
         val arg = u.pathSegments.firstOrNull() ?: return
         when (u.host) {
             "view" -> vm.linkView.value = View("special", arg)
             "source" -> vm.linkView.value = View("source", arg)
             "screen" -> vm.linkScreen.value = arg
-            // wavepacket://import/<base64url settings>: only on a fresh install (never replaces existing settings)
+            "do" -> if (arg == "refresh") vm.refresh()
+            // physicsfeed://import/<base64url settings>: only on a fresh install (never replaces existing settings)
             "import" -> if (vm.firstRun.value) runCatching {
                 vm.importConfig(String(android.util.Base64.decode(arg, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)))
             }
@@ -164,9 +165,17 @@ fun App(vm: AppViewModel) {
                     "export" -> {
                         val f = File(File(ctx.cacheDir, "share").apply { mkdirs() }, "physics-feed-settings.json")
                         f.writeText(vm.exportConfigText())
-                        shareFile(ctx, f, "application/json", "Send my Wavepacket settings")
+                        shareFile(ctx, f, "application/json", "Send my Physics Feed settings")
                     }
                     else -> dialog = what
+                }
+            }, onPdf = { p ->
+                vm.fetchPdf(p) { f ->
+                    when {
+                        f == null -> io.github.knightdwell.physicsfeed.ui.openUrl(ctx, p.url)
+                        vm.state.value.builtinPdf -> stack.add(Screen.Pdf(f, p))
+                        else -> io.github.knightdwell.physicsfeed.ui.openPdf(ctx, f)
+                    }
                 }
             })
             is Screen.Detail -> DetailScreen(vm, s.paper, onBack = back, onPdf = { f -> stack.add(Screen.Pdf(f, s.paper)) })

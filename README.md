@@ -1,4 +1,4 @@
-# 〰 Wavepacket — Physics Feed
+# 〰 Physics Feed
 
 New physics papers and science news, sorted into **your** research topics, in one calm desktop app for Linux.
 
@@ -27,7 +27,7 @@ The installer detects your distribution (Ubuntu/Debian/Mint/Pop!_OS, Fedora, Arc
 installs the few system packages it needs (Python + GTK, plus the optional PDF and web viewers), installs the app for
 your user only, adds it to the app menu and sets up a fetch twice a day.
 
-Then open **Wavepacket** from the app menu, or type **`pfeed`** in a terminal. A welcome screen asks for your field(s).
+Then open **Physics Feed** from the app menu, or type **`pfeed`** in a terminal. A welcome screen asks for your field(s).
 
 | Command | What it does |
 |---|---|

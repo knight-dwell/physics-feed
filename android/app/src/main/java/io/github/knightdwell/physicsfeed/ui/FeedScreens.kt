@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Switch
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -105,7 +107,8 @@ import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Paper) -> Unit, onNav: (String) -> Unit) {
+fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Paper) -> Unit, onNav: (String) -> Unit,
+               onPdf: (Paper) -> Unit) {
     val ctx = LocalContext.current
     val feed by vm.feed.collectAsState()
     val state by vm.state.collectAsState()
@@ -213,12 +216,10 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                 },
                 navigationIcon = { IconButton(onClick = { scope.launch { drawer.open() } }) { Icon(Icons.Filled.Menu, "Topics, journals, news") } },
                 actions = {
-                    if (view == View.News || view.kind == "newsgroup") {
-                        IconButton(onClick = { vm.setNewsCards(!state.newsCards) }) {
-                            Icon(if (state.newsCards) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.ViewCarousel,
-                                if (state.newsCards) "Show news as a list" else "Show news as cards")
-                        }
-                    }
+                    // cards ⇄ list switch
+                    Icon(Icons.Filled.ViewCarousel, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+                    Switch(checked = state.newsCards, onCheckedChange = { vm.setNewsCards(it) },
+                        modifier = Modifier.padding(horizontal = 4.dp).scale(0.8f))
                     IconButton(onClick = { onNav("search") }) { Icon(Icons.Filled.Search, "Search papers") }
                     IconButton(onClick = { vm.refresh() }, enabled = !refreshing) { Icon(Icons.Filled.Refresh, "Fetch now") }
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More") }
@@ -229,7 +230,7 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                             onClick = { vm.setTheme(mapOf("system" to "dark", "dark" to "light", "light" to "system")[state.theme] ?: "system") })
                         DropdownMenuItem(text = { Text(if (state.builtinPdf) "PDFs: built-in reader" else "PDFs: open in another app") },
                             onClick = { vm.setBuiltinPdf(!state.builtinPdf) })
-                        DropdownMenuItem(text = { Text(if (state.newsCards) "News: swipe cards" else "News: list") },
+                        DropdownMenuItem(text = { Text(if (state.newsCards) "Feed: swipe cards (switch: list)" else "Feed: list (switch: cards)") },
                             onClick = { vm.setNewsCards(!state.newsCards) })
                         DropdownMenuItem(text = { Text("Export settings (share with colleagues)") }, onClick = { menu = false; onNav("export") })
                         DropdownMenuItem(text = { Text("Import settings…") }, onClick = { menu = false; onNav("import") })
@@ -253,11 +254,13 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                 }
                 PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
                     if (inQuick) {
-                        HorizontalPager(state = pager, beyondViewportPageCount = 0, key = { quick[it].kind + quick[it].key }) { page ->
-                            ViewList(vm, quick[page], dark, loading, onOpen)
+                        // in card mode the cards take the swipe; use the chips to change section
+                        HorizontalPager(state = pager, beyondViewportPageCount = 0, userScrollEnabled = !state.newsCards,
+                            key = { quick[it].kind + quick[it].key }) { page ->
+                            ViewList(vm, quick[page], dark, loading, onOpen, onPdf)
                         }
                     } else {
-                        ViewList(vm, view, dark, loading, onOpen)
+                        ViewList(vm, view, dark, loading, onOpen, onPdf)
                     }
                 }
             }
@@ -267,7 +270,7 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
 
 /** One section's papers (or the news card stack). */
 @Composable
-private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean, onOpen: (Paper) -> Unit) {
+private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean, onOpen: (Paper) -> Unit, onPdf: (Paper) -> Unit) {
     val feed by vm.feed.collectAsState()
     val state by vm.state.collectAsState()
     val config by vm.config.collectAsState()
@@ -286,7 +289,7 @@ private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean,
                 }, color = MaterialTheme.colorScheme.outline,
             )
         }
-        (v == View.News || v.kind == "newsgroup") && state.newsCards -> NewsStack(vm, list, onOpen)
+        state.newsCards -> CardStack(vm, list, onOpen, onPdf)
         else -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
             items(list, key = { it.id }) { p ->
                 if (p.kind == "news") LaunchedEffect(p.id) { vm.wantImage(p) }

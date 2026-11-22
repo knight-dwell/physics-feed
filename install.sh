@@ -35,7 +35,7 @@ die()  { printf '\n%s✗ %s%s\n' "$r" "$*" "$n"; exit 1; }
 
 cat <<EOF
 ${c}${b}
-   〰  Wavepacket (Physics Feed) — installer${n}
+   〰  Physics Feed — installer${n}
    ${d}new physics papers and news, sorted into your research topics${n}
 EOF
 
@@ -148,7 +148,7 @@ ok "commands: physics-feed  and the short one  pfeed"
 install -m 644 "$REPO/data/physics-feed.svg" "$ICON_DIR/physics-feed.svg"
 cat > "$DESKTOP_DIR/physics-feed.desktop" <<EOF
 [Desktop Entry]
-Name=Wavepacket
+Name=Physics Feed
 GenericName=Physics paper feed
 Comment=New physics papers and news, sorted into your research topics
 Exec=$BIN/physics-feed
@@ -211,10 +211,10 @@ fi
 # ---------------------------------------------------------------- done
 cat <<EOF
 
-${g}${b}  ✓ Wavepacket is installed.${n}
+${g}${b}  ✓ Physics Feed is installed.${n}
 
   ${b}Open it${n}
-    • from your app menu:      ${c}Wavepacket${n}
+    • from your app menu:      ${c}Physics Feed${n}
     • or in a terminal type:   ${c}pfeed${n}${NEWTERM:+   ${d}(open a new terminal first)${n}}
 
   ${b}First start${n}

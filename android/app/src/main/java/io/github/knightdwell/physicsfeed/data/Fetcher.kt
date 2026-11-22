@@ -27,8 +27,25 @@ object Fetcher {
     private const val UA = "Mozilla/5.0 (Android) physics-feed/1.0"
 
     // ------------------------------------------------------------------ http
+    /** Android refuses plain http (e.g. APS feeds): ask for the https address instead. */
+    private fun secure(u: String) = if (u.startsWith("http://")) "https://" + u.removePrefix("http://") else u
+
+    private val crossrefGate = java.util.concurrent.Semaphore(2)   // Crossref allows only a couple of parallel requests
+
     fun get(url: String, accept: String? = null, timeoutMs: Int = 40_000): String {
-        var u = url
+        if ("api.crossref.org" !in url) return getOnce(url, accept, timeoutMs)
+        for (attempt in 0 until 4) {
+            crossrefGate.acquire()
+            try { return getOnce(url, accept, timeoutMs) }
+            catch (e: RuntimeException) { if (e.message != "HTTP 429" || attempt == 3) throw e }
+            finally { crossrefGate.release() }
+            Thread.sleep(2000L * (attempt + 1))   // too many requests: wait, then try again
+        }
+        throw RuntimeException("HTTP 429")
+    }
+
+    private fun getOnce(url: String, accept: String?, timeoutMs: Int): String {
+        var u = secure(url)
         repeat(5) {   // follow redirects, also http -> https
             val c = URL(u).openConnection() as HttpURLConnection
             c.instanceFollowRedirects = false
@@ -38,7 +55,7 @@ object Fetcher {
             val code = c.responseCode
             if (code in 300..399) {
                 val loc = c.getHeaderField("Location") ?: throw RuntimeException("redirect without location")
-                u = URL(URL(u), loc).toString(); c.disconnect(); return@repeat
+                u = secure(URL(URL(u), loc).toString()); c.disconnect(); return@repeat
             }
             if (code >= 400) { c.disconnect(); throw RuntimeException("HTTP $code") }
             return c.inputStream.bufferedReader().use { it.readText() }
@@ -47,14 +64,14 @@ object Fetcher {
     }
 
     fun getBytes(url: String): ByteArray {
-        var u = url
+        var u = secure(url)
         repeat(5) {
             val c = URL(u).openConnection() as HttpURLConnection
             c.instanceFollowRedirects = false
             c.connectTimeout = 40_000; c.readTimeout = 60_000
             c.setRequestProperty("User-Agent", UA)
             val code = c.responseCode
-            if (code in 300..399) { u = URL(URL(u), c.getHeaderField("Location")).toString(); c.disconnect(); return@repeat }
+            if (code in 300..399) { u = secure(URL(URL(u), c.getHeaderField("Location")).toString()); c.disconnect(); return@repeat }
             if (code >= 400) throw RuntimeException("HTTP $code")
             return c.inputStream.use { it.readBytes() }
         }
@@ -69,7 +86,7 @@ object Fetcher {
 
     /** The page's preview picture (og:image) for news without a picture in the feed. Reads only the page head. */
     fun ogImage(url: String): String {
-        val c = URL(url).openConnection() as HttpURLConnection
+        val c = URL(secure(url)).openConnection() as HttpURLConnection
         c.connectTimeout = 15_000; c.readTimeout = 15_000
         c.setRequestProperty("User-Agent", UA)
         return c.inputStream.use { ins ->

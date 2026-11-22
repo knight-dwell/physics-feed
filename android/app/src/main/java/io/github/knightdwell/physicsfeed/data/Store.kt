@@ -53,7 +53,7 @@ class Store(private val context: Context) {
         val autoUpdate: Boolean = true,
         val updateChecked: String = "",
         val builtinPdf: Boolean = true,      // read PDFs inside the app (false: hand them to a PDF app)
-        val newsCards: Boolean = true,       // news as swipeable stacked cards (false: a normal list)
+        val newsCards: Boolean = true,       // swipeable stacked cards in every section (false: the normal list)
     )
 
     fun loadState(): State = runCatching {

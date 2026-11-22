@@ -22,12 +22,12 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- wavepacket://view/news etc.: open a section directly (also used for testing) -->
+            <!-- physicsfeed://view/news etc.: open a section directly (also used for testing) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="wavepacket" />
+                <data android:scheme="physicsfeed" />
             </intent-filter>
         </activity>
         <provider

@@ -62,7 +62,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    val linkView = MutableStateFlow<View?>(null)      // from wavepacket:// links
+    val linkView = MutableStateFlow<View?>(null)      // from physicsfeed:// links
     val linkScreen = MutableStateFlow<String?>(null)
     val pendingSearch = MutableStateFlow<String?>(null)   // typed in the side menu, run by the Search screen
 
@@ -74,6 +74,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val u = java.net.URL(spec.url); return "${u.protocol}://${u.host}"
         }
         return "https://www.google.com/search?q=" + java.net.URLEncoder.encode("$name journal latest articles", "UTF-8")
+    }
+
+    /** Download a paper's PDF (arXiv, or the publisher's link for open access) into the cache; null if there is none. */
+    fun fetchPdf(p: Paper, done: (java.io.File?) -> Unit) {
+        toast("Getting the PDF…")
+        viewModelScope.launch {
+            val f = withContext(Dispatchers.IO) {
+                runCatching {
+                    val dir = java.io.File(getApplication<Application>().cacheDir, "pdf").apply { mkdirs() }
+                    val file = java.io.File(dir, p.id.replace(Regex("[^A-Za-z0-9.]+"), "_") + ".pdf")
+                    if (!file.exists()) {
+                        val url = Fetcher.pdfLink(p).ifEmpty { throw RuntimeException("no PDF link") }
+                        val bytes = Fetcher.getBytes(url)
+                        if (bytes.size < 5 || String(bytes, 0, 4) != "%PDF") throw RuntimeException("not a PDF")
+                        file.writeBytes(bytes)
+                    }
+                    file
+                }.getOrNull()
+            }
+            done(f)
+        }
     }
 
     fun setBuiltinPdf(on: Boolean) = setState(_state.value.copy(builtinPdf = on))
@@ -257,7 +278,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun importConfig(text: String) {
         runCatching { store.importConfig(text) }
             .onSuccess { _config.value = it; firstRun.value = false; retag(); toast("Settings imported"); refresh() }
-            .onFailure { toast("That isn't a Wavepacket settings file") }
+            .onFailure { toast("That isn't a Physics Feed settings file") }
     }
 
     fun topicKeywords(id: String): Pair<String, List<String>?> {

@@ -133,6 +133,7 @@ entry.search { background: $surface_container_high; color: $on_surface; border: 
 .card:hover { background: $surface_container_high; }
 .card.new { border-left: 3px solid $primary; }
 .card.selected { background: $surface_container_highest; box-shadow: inset 0 0 0 1px $primary; }
+.thumb { border-radius: 12px; }
 .preview { background: $surface_container; border-radius: 18px; border: 1px solid $outline_variant;
            padding: 4px; margin: 0 0 0 4px; }
 .ptools { margin: 2px 0 4px 0; }
@@ -217,7 +218,7 @@ LIGHT_EXTRA = """
 """
 
 
-HELP = """<b>Wavepacket</b> (Physics Feed) collects new papers from arXiv and journals every day (8:30 and 20:30) and sorts them
+HELP = """<b>Physics Feed</b> collects new papers from arXiv and journals every day (8:30 and 20:30) and sorts them
 into <b>your topics</b>. News feeds have their own section.
 
 <b>Sidebar</b>
@@ -295,7 +296,7 @@ def open_uri(uri):
 
 class Feed(Gtk.Window):
     def __init__(self):
-        super().__init__(title="Wavepacket")
+        super().__init__(title="Physics Feed")
         self.set_default_size(1240, 820)
         self.set_icon_name("accessories-dictionary")
         self.state = load_json(STATE, {"saved": {}, "last_open": "", "read": []})
@@ -310,13 +311,23 @@ class Feed(Gtk.Window):
         # ---- sidebar
         side_scroll = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         side_scroll.set_size_request(220, -1)
-        self.side_scroll = side_scroll
-        side_scroll.get_style_context().add_class("sidebar")
         self.side = Gtk.ListBox()
         self.side.set_header_func(self._side_header)
         self.side.connect("row-selected", self._on_side)
+        self.side.set_filter_func(self._side_filter)
         side_scroll.add(self.side)
-        root.pack_start(side_scroll, False, False, 0)
+        side_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        side_box.get_style_context().add_class("sidebar")
+        self.side_search = Gtk.SearchEntry(placeholder_text="Find topic, journal… or Enter: search papers")
+        self.side_search.get_style_context().add_class("search")
+        self.side_search.set_margin_start(8); self.side_search.set_margin_end(8); self.side_search.set_margin_top(10)
+        self.side_search.set_tooltip_text("Type to filter this list. Press Enter to search all of arXiv / journals for it.")
+        self.side_search.connect("search-changed", lambda *_: self.side.invalidate_filter())
+        self.side_search.connect("activate", lambda e: self._side_search_go(e.get_text()))
+        side_box.pack_start(self.side_search, False, False, 0)
+        side_box.pack_start(side_scroll, True, True, 0)
+        self.side_scroll = side_box   # ☰ hides the whole column
+        root.pack_start(side_box, False, False, 0)
         # ---- main
         main = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin=18)
         main.get_style_context().add_class("main")
@@ -332,7 +343,7 @@ class Feed(Gtk.Window):
         self.side_btn.set_tooltip_text("Show/hide the topic list")
         top.pack_start(self.side_btn, False, False, 0)
         tbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        t = Gtk.Label(label="Wavepacket", xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        t = Gtk.Label(label="Physics Feed", xalign=0, ellipsize=Pango.EllipsizeMode.END)
         t.get_style_context().add_class("apptitle")
         self.sub = Gtk.Label(xalign=0, ellipsize=Pango.EllipsizeMode.END)
         self.sub.get_style_context().add_class("subtitle")
@@ -475,8 +486,7 @@ class Feed(Gtk.Window):
         items = self.data.get("items", [])
         self.sub.set_text(f"{len(items)} papers · updated {self.data.get('updated', 'never')}")
         errs = self.data.get("errors") or {}
-        self.warn.set_text(("\U000f0026 couldn't reach " + ", ".join(errs)) if errs else "")
-        self.warn.set_tooltip_text("\n".join(f"{k}: {v}" for k, v in errs.items()) or None)
+        self.warn.set_text("")   # journals that couldn't be fetched get a web link in the sidebar instead
         self._build_side()
         self._build_quick()
         self._render()
@@ -560,11 +570,15 @@ class Feed(Gtk.Window):
                                   len(self._items_for(("group", g))), head=g))
             for tp in topics:
                 rows.append(self._row(("topic", tp), "·", tp, len(self._items_for(("topic", tp))), head=g))
+        errs = self.data.get("errors") or {}
         for j in ["arXiv"] + self.data.get("journals", []):
             n = len(self._items_for(("source", j)))
             oa = j in FC.JOURNALS and FC.JOURNALS[j][2]
-            rows.append(self._row(("source", j), "\U000f0fc6" if oa else ("\U000f0ae4" if j != "arXiv" else "\U000f05da"),
-                                  j, n, head="Journals"))
+            if n == 0 and j in errs:   # couldn't fetch it: the row opens the journal's website
+                rows.append(self._row(("web", self._journal_site(j)), "\U000f03cc", j + "  ↗", 0, head="Journals"))
+            else:
+                rows.append(self._row(("source", j), "\U000f0fc6" if oa else ("\U000f0ae4" if j != "arXiv" else "\U000f05da"),
+                                      j, n, head="Journals"))
         news = self.data.get("news", {})
         if news:
             rows.append(self._row(("special", "news"), "\U000f0395", "All news", len(self._items_for(("special", "news"))),
@@ -594,8 +608,34 @@ class Feed(Gtk.Window):
                 self.side.select_row(r)
                 break
 
+    def _side_filter(self, row):
+        q = self.side_search.get_text().strip().lower() if hasattr(self, "side_search") else ""
+        if not q:
+            return True
+        lab = [c for c in row.get_child().get_children() if isinstance(c, Gtk.Label)]
+        return any(q in (l.get_text() or "").lower() for l in lab)
+
+    def _side_search_go(self, text):
+        if not text.strip():
+            return
+        self._goto(("special", "search"))
+        self.s_entry.set_text(text.strip())
+        self._arxiv_search()
+
+    def _journal_site(self, name):
+        spec = (RF.load_conf().get("journals") or {}).get(name)
+        if name == "arXiv":
+            return "https://arxiv.org/list/cond-mat/new"
+        if spec and spec[0].startswith("http"):
+            u = urllib.parse.urlparse(spec[0])
+            return f"{u.scheme}://{u.netloc}"
+        return "https://www.google.com/search?" + urllib.parse.urlencode({"q": f"{name} journal latest articles"})
+
     def _on_side(self, lb, row):
         if row is None:
+            return
+        if row.view[0] == "web":
+            open_uri(row.view[1])
             return
         self.view = row.view
         self.shown = PAGE
@@ -702,7 +742,13 @@ class Feed(Gtk.Window):
         title.get_style_context().add_class("ctitle")
         title.set_max_width_chars(40)
         title.set_selectable(False)
-        card.pack_start(title, False, False, 0)
+        if it.get("image"):
+            trow = Gtk.Box(spacing=12)
+            trow.pack_start(title, True, True, 0)
+            trow.pack_end(self._thumb(it["image"]), False, False, 0)
+            card.pack_start(trow, False, False, 0)
+        else:
+            card.pack_start(title, False, False, 0)
         authors = it.get("authors", [])
         if authors:
             a = Gtk.Label(label=", ".join(authors[:6]) + (" et al." if len(authors) >= 6 else ""), xalign=0,
@@ -721,6 +767,43 @@ class Feed(Gtk.Window):
         ev.connect("enter-notify-event", lambda w, e: w.get_window() and w.get_window().set_cursor(
             Gdk.Cursor.new_from_name(w.get_display(), "pointer")))
         return ev
+
+    def _thumb(self, url, size=84):
+        """A small rounded picture, downloaded once into ~/.cache/physics-feed/img (in the background)."""
+        import hashlib
+        img = Gtk.Image()
+        img.set_size_request(size, size)
+        img.get_style_context().add_class("thumb")
+        d = os.path.join(RF.CACHE_DIR, "img")
+        path = os.path.join(d, hashlib.sha1(url.encode()).hexdigest()[:20])
+
+        def show():
+            try:
+                from gi.repository import GdkPixbuf
+                pb = GdkPixbuf.Pixbuf.new_from_file(path)
+                w, h = pb.get_width(), pb.get_height()
+                s = size / min(w, h)
+                pb = pb.scale_simple(max(1, int(w * s)), max(1, int(h * s)), GdkPixbuf.InterpType.BILINEAR)
+                x, y = (pb.get_width() - size) // 2, (pb.get_height() - size) // 2
+                img.set_from_pixbuf(pb.new_subpixbuf(max(0, x), max(0, y), size, size))
+            except Exception:
+                img.hide()
+            return False
+
+        if os.path.exists(path):
+            GLib.idle_add(show)
+        else:
+            def work():
+                try:
+                    os.makedirs(d, exist_ok=True)
+                    data = RF.get(url, timeout=20)
+                    with open(path, "wb") as fh:
+                        fh.write(data)
+                    GLib.idle_add(show)
+                except Exception:
+                    GLib.idle_add(img.hide)
+            threading.Thread(target=work, daemon=True).start()
+        return img
 
     def _toggle_save(self, btn, it):
         if it["id"] in self.state["saved"]:
@@ -1246,13 +1329,13 @@ class Feed(Gtk.Window):
 
     # ---------- first start
     def _welcome(self):
-        dlg = Gtk.Dialog(title="Welcome to Wavepacket", transient_for=self, modal=True)
+        dlg = Gtk.Dialog(title="Welcome to Physics Feed", transient_for=self, modal=True)
         dlg.set_default_size(620, 640)
         dlg.get_style_context().add_class("topics-dialog")
         box = dlg.get_content_area()
         box.set_border_width(18)
         box.set_spacing(10)
-        t = Gtk.Label(label="Welcome to Wavepacket", xalign=0)
+        t = Gtk.Label(label="Welcome to Physics Feed", xalign=0)
         t.get_style_context().add_class("apptitle")
         box.pack_start(t, False, False, 0)
         lab = Gtk.Label(xalign=0, wrap=True, label=(
@@ -2079,7 +2162,7 @@ def main(argv=None):
         sys.argv = ["physics-feed"] + (["--quiet"] if args.quiet else [])
         return RF.main()
     GLib.set_prgname("physics-feed")
-    GLib.set_application_name("Wavepacket")
+    GLib.set_application_name("Physics Feed")
     first_run = not os.path.exists(CONF)
     w = Feed()
     w.show_all()
