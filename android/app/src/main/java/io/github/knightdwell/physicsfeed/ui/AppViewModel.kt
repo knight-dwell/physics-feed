@@ -154,6 +154,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    val loadingOlder = MutableStateFlow(false)
+
+    /** "Load 2 more days": older papers from arXiv and Crossref journals. */
+    fun loadOlder(days: Long = 2) {
+        if (loadingOlder.value) return
+        loadingOlder.value = true
+        viewModelScope.launch {
+            val r = withContext(Dispatchers.IO) { runCatching { Fetcher.fetchOlder(_config.value, _feed.value, days) } }
+            r.onSuccess { (f, added) ->
+                _feed.value = f
+                withContext(Dispatchers.IO) { store.saveFeed(f) }
+                toast(if (added > 0) "$added older papers added" else "Nothing older found for those days")
+            }.onFailure { toast("Couldn't load older papers: ${it.message}") }
+            loadingOlder.value = false
+        }
+    }
+
+    fun oldestDate(): String = _feed.value.items.filter { it.kind != "news" && it.date.isNotEmpty() }.minOfOrNull { it.date } ?: ""
+
     fun loadFullAbstract(p: Paper, done: (String) -> Unit) {
         val cut = p.kind != "news" && (p.abstract.isEmpty() || p.abstract.endsWith("…") || p.abstract.endsWith("..."))
         if (!cut) return

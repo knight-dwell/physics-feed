@@ -240,8 +240,9 @@ object Fetcher {
         )
     }
 
-    fun fetchCrossref(name: String, issn: String, since: String): List<Paper> {
-        val q = "filter=${enc("from-pub-date:$since,type:journal-article")}&sort=published&order=desc&rows=100&select=$CR_FIELDS"
+    fun fetchCrossref(name: String, issn: String, since: String, until: String = ""): List<Paper> {
+        val f = "from-pub-date:$since," + (if (until.isNotEmpty()) "until-pub-date:$until," else "") + "type:journal-article"
+        val q = "filter=${enc(f)}&sort=published&order=desc&rows=100&select=$CR_FIELDS"
         val items = JSONObject(get("https://api.crossref.org/journals/$issn/works?$q")).getJSONObject("message").getJSONArray("items")
         return (0 until items.length()).map { crossrefItem(items.getJSONObject(it), name) }.filter { it.title.isNotEmpty() }
     }
@@ -346,9 +347,10 @@ object Fetcher {
         return if (cs.size > 1) "($c)" else c
     }
 
-    fun fetchArxiv(cats: List<String>, since: String, page: Int = 1000, maxPages: Int = 5): List<Paper> {
+    fun fetchArxiv(cats: List<String>, since: String, page: Int = 1000, maxPages: Int = 5, until: String = ""): List<Paper> {
         if (cats.isEmpty()) return emptyList()
-        val q = "${catClause(cats)} AND submittedDate:[${since.replace("-", "")}0000 TO 209912312359]"
+        val to = if (until.isEmpty()) "209912312359" else until.replace("-", "") + "2359"
+        val q = "${catClause(cats)} AND submittedDate:[${since.replace("-", "")}0000 TO $to]"
         val out = mutableListOf<Paper>()
         for (n in 0 until maxPages) {
             val url = "https://export.arxiv.org/api/query?search_query=${enc(q)}&sortBy=submittedDate&sortOrder=descending&start=${n * page}&max_results=$page"
@@ -490,6 +492,35 @@ object Fetcher {
         val oldIds = old.items.map { it.id }.toSet()
         val newHits = feed.items.filter { it.topics.isNotEmpty() && it.id !in oldIds }
         feed to (if (oldIds.isEmpty()) emptyList() else newHits)
+    }
+
+    /** Go further back: the `days` before the oldest paper in the feed, from arXiv and Crossref journals
+     *  (plain RSS feeds only ever list their newest items). Loaded papers are kept ~a week. */
+    suspend fun fetchOlder(conf: Config, old: FeedData, days: Long = 2): Pair<FeedData, Int> = coroutineScope {
+        val today = LocalDate.now()
+        val oldest = old.items.filter { it.kind != "news" && it.date.isNotEmpty() }.minOfOrNull { it.date }
+            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: today.minusDays(KEEP_DAYS)
+        val from = oldest.minusDays(days); val to = oldest.minusDays(1)
+        val fresh = java.util.Collections.synchronizedList(mutableListOf<Paper>())
+        val gate = Semaphore(6)
+        val jobs = mutableListOf<kotlinx.coroutines.Deferred<*>>()
+        jobs += async(Dispatchers.IO) { runCatching { fresh += fetchArxiv(conf.arxivCategories, from.toString(), until = to.toString()) } }
+        for ((name, spec) in conf.journals.filter { it.value.url == "crossref" }) jobs += async(Dispatchers.IO) {
+            gate.withPermit {
+                runCatching {
+                    fresh += fetchCrossref(name, spec.issn, from.toString(), to.toString())
+                        .map { it.copy(filtered = spec.onlyMyTopics, oa = spec.oa || it.oa) }
+                }
+            }
+        }
+        jobs.awaitAll()
+        // keep them until about a week from now, so the next refresh doesn't trim them right away
+        val kept = fresh.map { p ->
+            val age = runCatching { java.time.temporal.ChronoUnit.DAYS.between(LocalDate.parse(p.date), today) }.getOrDefault(KEEP_DAYS)
+            p.copy(keep = (age + KEEP_DAYS).toInt())
+        }
+        val feed = merge(conf, old, kept, old.errors, old.arxivSince)
+        feed to (feed.items.size - old.items.size)
     }
 
     fun merge(conf: Config, old: FeedData, fresh: List<Paper>, errors: Map<String, String>, arxivSince: String): FeedData {

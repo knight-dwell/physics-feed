@@ -224,6 +224,7 @@ fun FeedScreen(vm: AppViewModel, view: View, onView: (View) -> Unit, onOpen: (Pa
                     IconButton(onClick = { vm.refresh() }, enabled = !refreshing) { Icon(Icons.Filled.Refresh, "Fetch now") }
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "More") }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("Load 2 more days (older papers)") }, onClick = { menu = false; vm.loadOlder() })
                         DropdownMenuItem(text = { Text("My topics") }, onClick = { menu = false; onNav("topics") })
                         DropdownMenuItem(text = { Text("Journals & news") }, onClick = { menu = false; onNav("journals") })
                         DropdownMenuItem(text = { Text("Theme: " + mapOf("system" to "follow phone", "dark" to "dark", "light" to "light")[state.theme]) },
@@ -297,6 +298,9 @@ private fun ViewList(vm: AppViewModel, v: View, dark: Boolean, loading: Boolean,
                     PaperCard(p, state.saved[p.id], dark, isNew = state.lastOpen.isNotEmpty() && p.firstSeen > state.lastOpen.take(10),
                         image = p.image.ifEmpty { imgs[p.url] ?: "" }, onOpen = { onOpen(p) }, onStar = { vm.toggleSaved(p) })
                 }
+            }
+            if (v.kind != "folder" && v.kind != "flair" && v != View.Saved && v != View.News && v.kind != "newsgroup") {
+                item(key = "older-footer", contentType = "footer") { OlderButton(vm) }
             }
         }
     }
@@ -444,4 +448,21 @@ fun FoldersDialog(vm: AppViewModel, paper: Paper, onClose: () -> Unit) {
             onClose()
         }) { Text("Save") }
     }, dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } })
+}
+
+
+/** "Load 2 more days" (older papers, only when you want them). */
+@Composable
+fun OlderButton(vm: AppViewModel) {
+    val busy by vm.loadingOlder.collectAsState()
+    val feed by vm.feed.collectAsState()
+    val oldest = remember(feed) { vm.oldestDate() }
+    Column(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth(0.5f).padding(bottom = 8.dp))
+        OutlinedButton(onClick = { vm.loadOlder() }, enabled = !busy) {
+            Text(if (busy) "Loading older papers…" else "Load 2 more days")
+        }
+        if (oldest.isNotEmpty()) Text("the feed goes back to $oldest", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
+            modifier = Modifier.padding(top = 4.dp))
+    }
 }

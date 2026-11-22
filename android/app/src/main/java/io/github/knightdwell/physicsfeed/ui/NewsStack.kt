@@ -64,7 +64,7 @@ fun CardStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit, onP
     val ctx = LocalContext.current
     val state by vm.state.collectAsState()
     val imgs by vm.images.collectAsState()
-    var index by rememberSaveable(items.size) { mutableIntStateOf(0) }
+    var index by rememberSaveable(items.firstOrNull()?.id) { mutableIntStateOf(0) }   // stays put when older papers are appended
     val drag = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     if (items.isEmpty()) return
@@ -139,7 +139,8 @@ fun CardStack(vm: AppViewModel, items: List<Paper>, onOpen: (Paper) -> Unit, onP
                     }
                 }
             }
-            Text("swipe ← for the next one, → to go back · tap a card to open it", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
+            if (index >= items.size - 1 && cur?.kind != "news") OlderButton(vm)   // last card: offer older papers
+            else Text("swipe ← for the next one, → to go back · tap a card to open it", fontSize = 11.sp, color = MaterialTheme.colorScheme.outline,
                 modifier = Modifier.padding(top = 4.dp))
             Spacer(Modifier.weight(0.7f))
         }
